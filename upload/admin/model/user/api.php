@@ -1,47 +1,90 @@
 <?php
-namespace Opencart\Application\Model\User;
+namespace Opencart\Admin\Model\User;
+/**
+ * Class Api
+ *
+ * @package Opencart\Admin\Model\User
+ */
 class Api extends \Opencart\System\Engine\Model {
-	public function addApi($data) {
-		$this->db->query("INSERT INTO `" . DB_PREFIX . "api` SET `username` = '" . $this->db->escape((string)$data['username']) . "', `key` = '" . $this->db->escape((string)$data['key']) . "', `status` = '" . (int)$data['status'] . "', `date_added` = NOW(), `date_modified` = NOW()");
+	/**
+	 * Add Api
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return int
+	 */
+	public function addApi(array $data): int {
+		$this->db->query("INSERT INTO `" . DB_PREFIX . "api` SET `username` = '" . $this->db->escape((string)$data['username']) . "', `key` = '" . $this->db->escape((string)$data['key']) . "', `status` = '" . (bool)($data['status'] ?? 0) . "', `date_added` = NOW(), `date_modified` = NOW()");
 
 		$api_id = $this->db->getLastId();
 
 		if (isset($data['api_ip'])) {
 			foreach ($data['api_ip'] as $ip) {
 				if ($ip) {
-					$this->db->query("INSERT INTO `" . DB_PREFIX . "api_ip` SET `api_id` = '" . (int)$api_id . "', `ip` = '" . $this->db->escape($ip) . "'");
+					$this->addIp($api_id, $ip);
 				}
 			}
 		}
-		
+
 		return $api_id;
 	}
 
-	public function editApi($api_id, $data) {
-		$this->db->query("UPDATE `" . DB_PREFIX . "api` SET `username` = '" . $this->db->escape((string)$data['username']) . "', `key` = '" . $this->db->escape((string)$data['key']) . "', `status` = '" . (int)$data['status'] . "', `date_modified` = NOW() WHERE `api_id` = '" . (int)$api_id . "'");
+	/**
+	 * Edit Api
+	 *
+	 * @param int                  $api_id
+	 * @param array<string, mixed> $data
+	 *
+	 * @return void
+	 */
+	public function editApi(int $api_id, array $data): void {
+		$this->db->query("UPDATE `" . DB_PREFIX . "api` SET `username` = '" . $this->db->escape((string)$data['username']) . "', `key` = '" . $this->db->escape((string)$data['key']) . "', `status` = '" . (bool)($data['status'] ?? 0) . "', `date_modified` = NOW() WHERE `api_id` = '" . (int)$api_id . "'");
 
-		$this->db->query("DELETE FROM `" . DB_PREFIX . "api_ip` WHERE `api_id` = '" . (int)$api_id . "'");
+		$this->deleteIps($api_id);
 
 		if (isset($data['api_ip'])) {
 			foreach ($data['api_ip'] as $ip) {
 				if ($ip) {
-					$this->db->query("INSERT INTO `" . DB_PREFIX . "api_ip` SET `api_id` = '" . (int)$api_id . "', `ip` = '" . $this->db->escape($ip) . "'");
+					$this->addIp($api_id, $ip);
 				}
 			}
 		}
 	}
 
-	public function deleteApi($api_id) {
+	/**
+	 * Delete Api
+	 *
+	 * @param int $api_id
+	 *
+	 * @return void
+	 */
+	public function deleteApi(int $api_id): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "api` WHERE `api_id` = '" . (int)$api_id . "'");
+
+		$this->deleteIps($api_id);
 	}
 
-	public function getApi($api_id) {
+	/**
+	 * Get Api
+	 *
+	 * @param int $api_id
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getApi(int $api_id): array {
 		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "api` WHERE `api_id` = '" . (int)$api_id . "'");
 
 		return $query->row;
 	}
 
-	public function getApis($data = []) {
+	/**
+	 * Get Apis
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getApis(array $data = []): array {
 		$sql = "SELECT * FROM `" . DB_PREFIX . "api`";
 
 		$sort_data = [
@@ -80,17 +123,48 @@ class Api extends \Opencart\System\Engine\Model {
 		return $query->rows;
 	}
 
-	public function getTotalApis() {
+	/**
+	 * Get Total Apis
+	 *
+	 * @return int
+	 */
+	public function getTotalApis(): int {
 		$query = $this->db->query("SELECT COUNT(*) AS `total` FROM `" . DB_PREFIX . "api`");
 
-		return $query->row['total'];
+		return (int)$query->row['total'];
 	}
 
-	public function addIp($api_id, $ip) {
+	/**
+	 * Add Ip
+	 *
+	 * @param int    $api_id
+	 * @param string $ip
+	 *
+	 * @return void
+	 */
+	public function addIp(int $api_id, string $ip): void {
 		$this->db->query("INSERT INTO `" . DB_PREFIX . "api_ip` SET `api_id` = '" . (int)$api_id . "', `ip` = '" . $this->db->escape($ip) . "'");
 	}
 
-	public function getIps($api_id) {
+	/**
+	 * Delete Ips
+	 *
+	 * @param int $api_id
+	 *
+	 * @return void
+	 */
+	public function deleteIps(int $api_id): void {
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "api_ip` WHERE `api_id` = '" . (int)$api_id . "'");
+	}
+
+	/**
+	 * Get Ips
+	 *
+	 * @param int $api_id
+	 *
+	 * @return array<int, string>
+	 */
+	public function getIps(int $api_id): array {
 		$ip_data = [];
 
 		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "api_ip` WHERE `api_id` = '" . (int)$api_id . "'");
@@ -102,9 +176,18 @@ class Api extends \Opencart\System\Engine\Model {
 		return $ip_data;
 	}
 
-	public function addSession($api_id, $session_id, $ip) {
+	/**
+	 * Add Session
+	 *
+	 * @param int    $api_id
+	 * @param string $session_id
+	 * @param string $ip
+	 *
+	 * @return int
+	 */
+	public function addSession(int $api_id, string $session_id, string $ip): int {
 		$api_ip_query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "api_ip` WHERE `ip` = '" . $this->db->escape($ip) . "'");
-		
+
 		if (!$api_ip_query->num_rows) {
 			$this->db->query("INSERT INTO `" . DB_PREFIX . "api_ip` SET `api_id` = '" . (int)$api_id . "', `ip` = '" . $this->db->escape($ip) . "'");
 		}
@@ -113,18 +196,39 @@ class Api extends \Opencart\System\Engine\Model {
 
 		return $this->db->getLastId();
 	}
-	
-	public function getSessions($api_id) {
+
+	/**
+	 * Get Sessions
+	 *
+	 * @param int $api_id
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getSessions(int $api_id): array {
 		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "api_session` WHERE `api_id` = '" . (int)$api_id . "'");
 
 		return $query->rows;
 	}
-	
-	public function deleteSession($api_session_id) {
+
+	/**
+	 * Delete Session
+	 *
+	 * @param int $api_session_id
+	 *
+	 * @return void
+	 */
+	public function deleteSession(int $api_session_id): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "api_session` WHERE `api_session_id` = '" . (int)$api_session_id . "'");
 	}
-	
-	public function deleteSessionBySessionId($session_id) {
+
+	/**
+	 * Delete Session By Session ID
+	 *
+	 * @param string $session_id
+	 *
+	 * @return void
+	 */
+	public function deleteSessionsBySessionId(string $session_id): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "api_session` WHERE `session_id` = '" . $this->db->escape($session_id) . "'");
-	}		
+	}
 }

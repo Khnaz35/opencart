@@ -1,28 +1,37 @@
 <?php
-namespace Opencart\Application\Controller\Api;
+namespace Opencart\catalog\controller\api;
+/**
+ * Class Currency
+ *
+ * @package Opencart\Catalog\Controller\Api\Localisation
+ */
 class Currency extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * @return void
+	 */
+	public function index(): void {
 		$this->load->language('api/currency');
 
 		$json = [];
 
-		if (!isset($this->session->data['api_id'])) {
-			$json['error'] = $this->language->get('error_permission');
+		if (isset($this->request->post['currency'])) {
+			$currency = (string)$this->request->post['currency'];
 		} else {
-			$this->load->model('localisation/currency');
+			$currency = '';
+		}
 
-			$currency_info = $this->model_localisation_currency->getCurrencyByCode($this->request->post['currency']);
+		$this->load->model('localisation/currency');
 
-			if ($currency_info) {
-				$this->session->data['currency'] = $this->request->post['currency'];
+		$currency_info = $this->model_localisation_currency->getCurrencyByCode($currency);
 
-				unset($this->session->data['shipping_method']);
-				unset($this->session->data['shipping_methods']);
+		if (!$currency_info) {
+			$json['error'] = $this->language->get('error_currency');
+		}
 
-				$json['success'] = $this->language->get('text_success');
-			} else {
-				$json['error'] = $this->language->get('error_currency');
-			}
+		if (!$json) {
+			$this->session->data['currency'] = $currency;
+
+			$json['success'] = $this->language->get('text_success');
 		}
 
 		$this->response->addHeader('Content-Type: application/json');

@@ -1,19 +1,44 @@
 <?php
-namespace Opencart\Application\Model\Setting;
+namespace Opencart\Catalog\Model\Setting;
+/**
+ * Class Extension
+ *
+ * @package Opencart\Catalog\Model\Setting
+ */
 class Extension extends \Opencart\System\Engine\Model {
-	public function getExtensions() {
-		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "extension`");
+	/**
+	 * Get Extensions
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getExtensions(): array {
+		$query = $this->db->query("SELECT DISTINCT `extension` FROM `" . DB_PREFIX . "extension`");
 
 		return $query->rows;
 	}
 
-	public function getExtensionsByType($type) {
+	/**
+	 * Get Extensions By Type
+	 *
+	 * @param string $type
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getExtensionsByType(string $type): array {
 		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "extension` WHERE `type` = '" . $this->db->escape($type) . "'");
 
 		return $query->rows;
 	}
 
-	public function getExtensionByCode($type, $code) {
+	/**
+	 * Get Extension By Code
+	 *
+	 * @param string $type
+	 * @param string $code
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getExtensionByCode(string $type, string $code): array {
 		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "extension` WHERE `type` = '" . $this->db->escape($type) . "' AND `code` = '" . $this->db->escape($code) . "'");
 
 		return $query->row;

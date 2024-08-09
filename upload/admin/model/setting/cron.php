@@ -1,41 +1,107 @@
 <?php
-namespace Opencart\Application\Model\Setting;
+namespace Opencart\Admin\Model\Setting;
+/**
+ * Class Cron
+ *
+ * @package Opencart\Admin\Model\Setting
+ */
 class Cron extends \Opencart\System\Engine\Model {
-	public function addCron($code, $cycle = 'day', $action, $status) {
-		$this->db->query("INSERT INTO `" . DB_PREFIX . "cron` SET `code` = '" . $this->db->escape($code) . "', `cycle` = '" . $this->db->escape($cycle) . "', `action` = '" . $this->db->escape($action) . "', `status` = '" . (int)$status . "', `date_added` = NOW(), `date_modified` = NOW()");
+	/**
+	 * Add Cron
+	 *
+	 * @param string $code
+	 * @param string $description
+	 * @param string $cycle
+	 * @param string $action
+	 * @param bool   $status
+	 *
+	 * @return int
+	 */
+	public function addCron(string $code, string $description, string $cycle, string $action, bool $status): int {
+		$this->db->query("INSERT INTO `" . DB_PREFIX . "cron` SET `code` = '" . $this->db->escape($code) . "', `description` = '" . $this->db->escape($description) . "', `cycle` = '" . $this->db->escape($cycle) . "', `action` = '" . $this->db->escape($action) . "', `status` = '" . (int)$status . "', `date_added` = NOW(), `date_modified` = NOW()");
 
 		return $this->db->getLastId();
 	}
 
-	public function deleteCron($cron_id) {
+	/**
+	 * Delete Cron
+	 *
+	 * @param int $cron_id
+	 *
+	 * @return void
+	 */
+	public function deleteCron(int $cron_id): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "cron` WHERE `cron_id` = '" . (int)$cron_id . "'");
 	}
 
-	public function deleteCronByCode($code) {
+	/**
+	 * Delete Cron By Code
+	 *
+	 * @param string $code
+	 *
+	 * @return void
+	 */
+	public function deleteCronByCode(string $code): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "cron` WHERE `code` = '" . $this->db->escape($code) . "'");
 	}
 
-	public function editCron($cron_id) {
+	/**
+	 * Edit Cron
+	 *
+	 * @param int $cron_id
+	 *
+	 * @return void
+	 */
+	public function editCron(int $cron_id): void {
 		$this->db->query("UPDATE `" . DB_PREFIX . "cron` SET `date_modified` = NOW() WHERE `cron_id` = '" . (int)$cron_id . "'");
 	}
 
-	public function editStatus($cron_id, $status) {
-		$this->db->query("UPDATE `" . DB_PREFIX . "cron` SET `status` = '" . (int)$status . "' WHERE `cron_id` = '" . (int)$cron_id . "'");
+	/**
+	 * Edit Status
+	 *
+	 * @param int  $cron_id
+	 * @param bool $status
+	 *
+	 * @return void
+	 */
+	public function editStatus(int $cron_id, bool $status): void {
+		$this->db->query("UPDATE `" . DB_PREFIX . "cron` SET `status` = '" . (bool)$status . "' WHERE `cron_id` = '" . (int)$cron_id . "'");
 	}
 
-	public function getCron($cron_id) {
+	/**
+	 * Get Cron
+	 *
+	 * @param int $cron_id
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getCron(int $cron_id): array {
 		$query = $this->db->query("SELECT DISTINCT * FROM `" . DB_PREFIX . "cron` WHERE `cron_id` = '" . (int)$cron_id . "'");
 
 		return $query->row;
 	}
 
-	public function getCronByCode($code) {
+	/**
+	 * Get Cron By Code
+	 *
+	 * @param string $code
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getCronByCode(string $code): array {
 		$query = $this->db->query("SELECT DISTINCT * FROM `" . DB_PREFIX . "cron` WHERE `code` = '" . $this->db->escape($code) . "' LIMIT 1");
 
 		return $query->row;
 	}
 
-	public function getCrons($data = []) {
+	/**
+	 * Get Cron(s)
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getCrons(array $data = []): array {
 		$sql = "SELECT * FROM `" . DB_PREFIX . "cron`";
 
 		$sort_data = [
@@ -48,7 +114,7 @@ class Cron extends \Opencart\System\Engine\Model {
 		];
 
 		if (isset($data['sort']) && in_array($data['sort'], $sort_data)) {
-			$sql .= " ORDER BY `" . $data['sort'] . "`";
+			$sql .= " ORDER BY " . $data['sort'];
 		} else {
 			$sql .= " ORDER BY `date_added`";
 		}
@@ -76,9 +142,14 @@ class Cron extends \Opencart\System\Engine\Model {
 		return $query->rows;
 	}
 
-	public function getTotalCrons() {
+	/**
+	 * Get Total Cron(s)
+	 *
+	 * @return int
+	 */
+	public function getTotalCrons(): int {
 		$query = $this->db->query("SELECT COUNT(*) AS `total` FROM `" . DB_PREFIX . "cron`");
 
-		return $query->row['total'];
+		return (int)$query->row['total'];
 	}
 }

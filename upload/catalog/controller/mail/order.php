@@ -1,7 +1,22 @@
 <?php
-namespace Opencart\Application\Controller\Mail;
+namespace Opencart\Catalog\Controller\Mail;
+/**
+ * Class Order
+ *
+ * @package Opencart\Catalog\Controller\Mail
+ */
 class Order extends \Opencart\System\Engine\Controller {
-	public function index(&$route, &$args) {
+	/**
+	 * Index
+	 *
+	 * Trigger catalog/model/checkout/order/addHistory/before
+	 *
+	 * @param string            $route
+	 * @param array<int, mixed> $args
+	 *
+	 * @return void
+	 */
+	public function index(string &$route, array &$args): void {
 		if (isset($args[0])) {
 			$order_id = $args[0];
 		} else {
@@ -30,19 +45,31 @@ class Order extends \Opencart\System\Engine\Controller {
 		$order_info = $this->model_checkout_order->getOrder($order_id);
 
 		if ($order_info) {
-			// If order status is 0 then becomes greater than 0 send main html email
+			// If the order status returns 0, then it becomes greater than 0. Therefore, we send the default html email
 			if (!$order_info['order_status_id'] && $order_status_id) {
 				$this->add($order_info, $order_status_id, $comment, $notify);
 			}
 
-			// If order status is not 0 then send update text email
+			// If the order status does not return 0, we send the update as a text email
 			if ($order_info['order_status_id'] && $order_status_id && $notify) {
-				$this->edit($order_info, $order_status_id, $comment, $notify);
+				$this->history($order_info, $order_status_id, $comment, $notify);
 			}
 		}
 	}
 
-	public function add($order_info, $order_status_id, $comment, $notify) {
+	/**
+	 * Add
+	 *
+	 * @param array<string, mixed> $order_info
+	 * @param int                  $order_status_id
+	 * @param string               $comment
+	 * @param bool                 $notify
+	 *
+	 * @throws \Exception
+	 *
+	 * @return void
+	 */
+	public function add(array $order_info, int $order_status_id, string $comment, bool $notify): void {
 		// Check for any downloadable products
 		$download_status = false;
 
@@ -57,48 +84,67 @@ class Order extends \Opencart\System\Engine\Controller {
 			}
 		}
 
-		// Load the language for any mails that might be required to be sent out
-		$language = new \Opencart\System\Library\Language($order_info['language_code']);
-		$language->load($order_info['language_code']);
-		$language->load('mail/order_add');
+		$store_logo = html_entity_decode($this->config->get('config_logo'), ENT_QUOTES, 'UTF-8');
+		$store_name = html_entity_decode($this->config->get('config_name'), ENT_QUOTES, 'UTF-8');
 
-		// HTML Mail
-		$data['title'] = sprintf($language->get('text_subject'), $order_info['store_name'], $order_info['order_id']);
+		if (!defined('HTTP_CATALOG')) {
+			$store_url = HTTP_SERVER;
+		} else {
+			$store_url = HTTP_CATALOG;
+		}
 
-		$data['text_greeting'] = sprintf($language->get('text_greeting'), $order_info['store_name']);
-		$data['text_link'] = $language->get('text_link');
-		$data['text_download'] = $language->get('text_download');
-		$data['text_order_detail'] = $language->get('text_order_detail');
-		$data['text_instruction'] = $language->get('text_instruction');
-		$data['text_order_id'] = $language->get('text_order_id');
-		$data['text_date_added'] = $language->get('text_date_added');
-		$data['text_payment_method'] = $language->get('text_payment_method');
-		$data['text_shipping_method'] = $language->get('text_shipping_method');
-		$data['text_email'] = $language->get('text_email');
-		$data['text_telephone'] = $language->get('text_telephone');
-		$data['text_ip'] = $language->get('text_ip');
-		$data['text_order_status'] = $language->get('text_order_status');
-		$data['text_payment_address'] = $language->get('text_payment_address');
-		$data['text_shipping_address'] = $language->get('text_shipping_address');
-		$data['text_product'] = $language->get('text_product');
-		$data['text_model'] = $language->get('text_model');
-		$data['text_quantity'] = $language->get('text_quantity');
-		$data['text_price'] = $language->get('text_price');
-		$data['text_total'] = $language->get('text_total');
-		$data['text_footer'] = $language->get('text_footer');
+		$this->load->model('setting/store');
+
+		$store_info = $this->model_setting_store->getStore($order_info['store_id']);
+
+		if ($store_info) {
+			$this->load->model('setting/setting');
+
+			$store_logo = html_entity_decode($this->model_setting_setting->getValue('config_logo', $store_info['store_id']), ENT_QUOTES, 'UTF-8');
+			$store_name = html_entity_decode($store_info['name'], ENT_QUOTES, 'UTF-8');
+			$store_url = $store_info['url'];
+		}
+
+		$this->load->model('localisation/language');
+
+		$language_info = $this->model_localisation_language->getLanguage($order_info['language_id']);
+
+		if ($language_info) {
+			$language_code = $language_info['code'];
+		} else {
+			$language_code = $this->config->get('config_language');
+		}
+
+		// Load the language for any mails using a different country code and prefixing it so it does not pollute the main data pool.
+		$this->load->language('default', 'mail', $language_code);
+		$this->load->language('mail/order_add', 'mail', $language_code);
+
+		// Add language vars to the template folder
+		$results = $this->language->all('mail');
+
+		foreach ($results as $key => $value) {
+			$data[$key] = $value;
+		}
+
+		$subject = sprintf($this->language->get('mail_text_subject'), $store_name, $order_info['order_id']);
 
 		$this->load->model('tool/image');
 
-		if (is_file(DIR_IMAGE . html_entity_decode($this->config->get('config_logo'), ENT_QUOTES, 'UTF-8'))) {
-			$data['logo'] = $this->model_tool_image->resize(html_entity_decode($this->config->get('config_logo'), ENT_QUOTES, 'UTF-8'), $this->config->get('theme_default_image_location_width'), $this->config->get('theme_default_image_cart_height'));
+		if (is_file(DIR_IMAGE . $store_logo)) {
+			$data['logo'] = $store_url . 'image/' . $store_logo;
 		} else {
 			$data['logo'] = '';
 		}
 
-		$data['store_name'] = $order_info['store_name'];
+		$data['title'] = sprintf($this->language->get('mail_text_subject'), $store_name, $order_info['order_id']);
+
+		$data['text_greeting'] = sprintf($this->language->get('mail_text_greeting'), $order_info['store_name']);
+
+		$data['store'] = $store_name;
 		$data['store_url'] = $order_info['store_url'];
+
 		$data['customer_id'] = $order_info['customer_id'];
-		$data['link'] = $order_info['store_url'] . 'index.php?route=account/order|info&order_id=' . $order_info['order_id'];
+		$data['link'] = $order_info['store_url'] . 'index.php?route=account/order.info&order_id=' . $order_info['order_id'];
 
 		if ($download_status) {
 			$data['download'] = $order_info['store_url'] . 'index.php?route=account/download';
@@ -107,9 +153,9 @@ class Order extends \Opencart\System\Engine\Controller {
 		}
 
 		$data['order_id'] = $order_info['order_id'];
-		$data['date_added'] = date($language->get('date_format_short'), strtotime($order_info['date_added']));
-		$data['payment_method'] = $order_info['payment_method'];
-		$data['shipping_method'] = $order_info['shipping_method'];
+		$data['date_added'] = date($this->language->get('date_format_short'), strtotime($order_info['date_added']));
+		$data['payment_method'] = $order_info['payment_method']['name'] ?? '';
+		$data['shipping_method'] = $order_info['shipping_method']['name'] ?? '';
 		$data['email'] = $order_info['email'];
 		$data['telephone'] = $order_info['telephone'];
 		$data['ip'] = $order_info['ip'];
@@ -122,12 +168,9 @@ class Order extends \Opencart\System\Engine\Controller {
 			$data['order_status'] = '';
 		}
 
-		if ($comment && $notify) {
-			$data['comment'] = nl2br($comment);
-		} else {
-			$data['comment'] = '';
-		}
+		$data['comment'] = nl2br($order_info['comment']);
 
+		// Payment Address
 		if ($order_info['payment_address_format']) {
 			$format = $order_info['payment_address_format'];
 		} else {
@@ -160,8 +203,21 @@ class Order extends \Opencart\System\Engine\Controller {
 			'country'   => $order_info['payment_country']
 		];
 
-		$data['payment_address'] = str_replace(["\r\n", "\r", "\n"], '<br />', preg_replace(["/\s\s+/", "/\r\r+/", "/\n\n+/"], '<br />', trim(str_replace($find, $replace, $format))));
+		$pattern_1 = [
+			"\r\n",
+			"\r",
+			"\n"
+		];
 
+		$pattern_2 = [
+			"/\\s\\s+/",
+			"/\r\r+/",
+			"/\n\n+/"
+		];
+
+		$data['payment_address'] = str_replace($pattern_1, '<br/>', preg_replace($pattern_2, '<br/>', trim(str_replace($find, $replace, $format))));
+
+		// Shipping Address
 		if ($order_info['shipping_address_format']) {
 			$format = $order_info['shipping_address_format'];
 		} else {
@@ -194,7 +250,7 @@ class Order extends \Opencart\System\Engine\Controller {
 			'country'   => $order_info['shipping_country']
 		];
 
-		$data['shipping_address'] = str_replace(["\r\n", "\r", "\n"], '<br />', preg_replace(["/\s\s+/", "/\r\r+/", "/\n\n+/"], '<br />', trim(str_replace($find, $replace, $format))));
+		$data['shipping_address'] = str_replace($pattern_1, '<br/>', preg_replace($pattern_2, '<br/>', trim(str_replace($find, $replace, $format))));
 
 		$this->load->model('tool/upload');
 
@@ -221,17 +277,47 @@ class Order extends \Opencart\System\Engine\Controller {
 
 				$option_data[] = [
 					'name'  => $order_option['name'],
-					'value' => (utf8_strlen($value) > 20 ? utf8_substr($value, 0, 20) . '..' : $value)
+					'value' => (oc_strlen($value) > 20 ? oc_substr($value, 0, 20) . '..' : $value)
 				];
 			}
 
+			$description = '';
+
+			$this->load->model('checkout/order');
+
+			$subscription_info = $this->model_checkout_order->getSubscription($order_info['order_id'], $order_product['order_product_id']);
+
+			if ($subscription_info) {
+				if ($subscription_info['trial_status']) {
+					$trial_price = $this->currency->format($subscription_info['trial_price'] + ($this->config->get('config_tax') ? $subscription_info['trial_tax'] : 0), $order_info['currency_code'], $order_info['currency_value']);
+					$trial_cycle = $subscription_info['trial_cycle'];
+					$trial_frequency = $this->language->get('text_' . $subscription_info['trial_frequency']);
+					$trial_duration = $subscription_info['trial_duration'];
+
+					$description .= sprintf($this->language->get('text_subscription_trial'), $trial_price, $trial_cycle, $trial_frequency, $trial_duration);
+				}
+
+				$price = $this->currency->format($subscription_info['price'] + ($this->config->get('config_tax') ? $subscription_info['tax'] : 0), $order_info['currency_code'], $order_info['currency_value']);
+				$cycle = $subscription_info['cycle'];
+				$frequency = $this->language->get('text_' . $subscription_info['frequency']);
+				$duration = $subscription_info['duration'];
+
+				if ($duration) {
+					$description .= sprintf($this->language->get('text_subscription_duration'), $price, $cycle, $frequency, $duration);
+				} else {
+					$description .= sprintf($this->language->get('text_subscription_cancel'), $price, $cycle, $frequency);
+				}
+			}
+
 			$data['products'][] = [
-				'name'     => $order_product['name'],
-				'model'    => $order_product['model'],
-				'option'   => $option_data,
-				'quantity' => $order_product['quantity'],
-				'price'    => $this->currency->format($order_product['price'] + ($this->config->get('config_tax') ? $order_product['tax'] : 0), $order_info['currency_code'], $order_info['currency_value']),
-				'total'    => $this->currency->format($order_product['total'] + ($this->config->get('config_tax') ? ($order_product['tax'] * $order_product['quantity']) : 0), $order_info['currency_code'], $order_info['currency_value'])
+				'name'         => $order_product['name'],
+				'model'        => $order_product['model'],
+				'option'       => $option_data,
+				'subscription' => $description,
+				'quantity'     => $order_product['quantity'],
+				'price'        => $this->currency->format($order_product['price'] + ($this->config->get('config_tax') ? $order_product['tax'] : 0), $order_info['currency_code'], $order_info['currency_value']),
+				'total'        => $this->currency->format($order_product['total'] + ($this->config->get('config_tax') ? ($order_product['tax'] * $order_product['quantity']) : 0), $order_info['currency_code'], $order_info['currency_value']),
+				'reward'       => $order_product['reward']
 			];
 		}
 
@@ -267,38 +353,83 @@ class Order extends \Opencart\System\Engine\Controller {
 			$from = $this->config->get('config_email');
 		}
 
-		$mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'));
-		$mail->parameter = $this->config->get('config_mail_parameter');
-		$mail->smtp_hostname = $this->config->get('config_mail_smtp_hostname');
-		$mail->smtp_username = $this->config->get('config_mail_smtp_username');
-		$mail->smtp_password = html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8');
-		$mail->smtp_port = $this->config->get('config_mail_smtp_port');
-		$mail->smtp_timeout = $this->config->get('config_mail_smtp_timeout');
+		if ($this->config->get('config_mail_engine')) {
+			$mail_option = [
+				'parameter'     => $this->config->get('config_mail_parameter'),
+				'smtp_hostname' => $this->config->get('config_mail_smtp_hostname'),
+				'smtp_username' => $this->config->get('config_mail_smtp_username'),
+				'smtp_password' => html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8'),
+				'smtp_port'     => $this->config->get('config_mail_smtp_port'),
+				'smtp_timeout'  => $this->config->get('config_mail_smtp_timeout')
+			];
 
-		$mail->setTo($order_info['email']);
-		$mail->setFrom($from);
-		$mail->setSender(html_entity_decode($order_info['store_name'], ENT_QUOTES, 'UTF-8'));
-		$mail->setSubject(html_entity_decode(sprintf($language->get('text_subject'), $order_info['store_name'], $order_info['order_id']), ENT_QUOTES, 'UTF-8'));
-		$mail->setHtml($this->load->view('mail/order_add', $data));
-		$mail->send();
+			$mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'), $mail_option);
+			$mail->setTo($order_info['email']);
+			$mail->setFrom($from);
+			$mail->setSender($store_name);
+			$mail->setSubject($subject);
+			$mail->setHtml($this->load->view('mail/order_add', $data));
+			$mail->send();
+		}
 	}
 
-	public function edit($order_info, $order_status_id, $comment, $notify) {
-		$language = new \Opencart\System\Library\Language($order_info['language_code']);
-		$language->load($order_info['language_code']);
-		$language->load('mail/order_edit');
+	/**
+	 * History
+	 *
+	 * catalog/model/checkout/order/addHistory/before
+	 *
+	 * @param array<string, mixed> $order_info
+	 * @param int                  $order_status_id
+	 * @param string               $comment
+	 * @param bool                 $notify
+	 *
+	 * @throws \Exception
+	 *
+	 * @return void
+	 */
+	public function history(array $order_info, int $order_status_id, string $comment, bool $notify): void {
+		$store_name = html_entity_decode($this->config->get('config_name'), ENT_QUOTES, 'UTF-8');
 
-		$data['text_order_id'] = $language->get('text_order_id');
-		$data['text_date_added'] = $language->get('text_date_added');
-		$data['text_order_status'] = $language->get('text_order_status');
-		$data['text_link'] = $language->get('text_link');
-		$data['text_comment'] = $language->get('text_comment');
-		$data['text_footer'] = $language->get('text_footer');
+		if (!defined('HTTP_CATALOG')) {
+			$store_url = HTTP_SERVER;
+		} else {
+			$store_url = HTTP_CATALOG;
+		}
+
+		$this->load->model('setting/store');
+
+		$store_info = $this->model_setting_store->getStore($order_info['store_id']);
+
+		if ($store_info) {
+			$store_name = html_entity_decode($store_info['name'], ENT_QUOTES, 'UTF-8');
+			$store_url = $store_info['url'];
+		}
+
+		$this->load->model('localisation/language');
+
+		$language_info = $this->model_localisation_language->getLanguage($order_info['language_id']);
+
+		if ($language_info) {
+			$language_code = $language_info['code'];
+		} else {
+			$language_code = $this->config->get('config_language');
+		}
+
+		// Load the language for any mails using a different country code and prefixing it so it does not pollute the main data pool.
+		$this->load->language('default', 'mail', $language_code);
+		$this->load->language('mail/order_edit', 'mail', $language_code);
+
+		// Add language vars to the template folder
+		$results = $this->language->all('mail');
+
+		foreach ($results as $key => $value) {
+			$data[$key] = $value;
+		}
+
+		$subject = sprintf($this->language->get('mail_text_subject'), $store_name, $order_info['order_id']);
 
 		$data['order_id'] = $order_info['order_id'];
-		$data['date_added'] = date($language->get('date_format_short'), strtotime($order_info['date_added']));
-		$data['store_url'] = $this->config->get('config_url');
-		$data['store'] = html_entity_decode($this->config->get('config_name'), ENT_QUOTES, 'UTF-8');
+		$data['date_added'] = date($this->language->get('date_format_short'), strtotime($order_info['date_added']));
 
 		$order_status_query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "order_status` WHERE `order_status_id` = '" . (int)$order_status_id . "' AND `language_id` = '" . (int)$order_info['language_id'] . "'");
 
@@ -309,12 +440,15 @@ class Order extends \Opencart\System\Engine\Controller {
 		}
 
 		if ($order_info['customer_id']) {
-			$data['link'] = $order_info['store_url'] . 'index.php?route=account/order|info&order_id=' . $order_info['order_id'];
+			$data['link'] = $order_info['store_url'] . 'index.php?route=account/order.info&order_id=' . $order_info['order_id'];
 		} else {
 			$data['link'] = '';
 		}
 
 		$data['comment'] = strip_tags($comment);
+
+		$data['store'] = $store_name;
+		$data['store_url'] = $store_url;
 
 		$this->load->model('setting/setting');
 
@@ -324,24 +458,39 @@ class Order extends \Opencart\System\Engine\Controller {
 			$from = $this->config->get('config_email');
 		}
 
-		$mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'));
-		$mail->parameter = $this->config->get('config_mail_parameter');
-		$mail->smtp_hostname = $this->config->get('config_mail_smtp_hostname');
-		$mail->smtp_username = $this->config->get('config_mail_smtp_username');
-		$mail->smtp_password = html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8');
-		$mail->smtp_port = $this->config->get('config_mail_smtp_port');
-		$mail->smtp_timeout = $this->config->get('config_mail_smtp_timeout');
+		if ($this->config->get('config_mail_engine')) {
+			$mail_option = [
+				'parameter'     => $this->config->get('config_mail_parameter'),
+				'smtp_hostname' => $this->config->get('config_mail_smtp_hostname'),
+				'smtp_username' => $this->config->get('config_mail_smtp_username'),
+				'smtp_password' => html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8'),
+				'smtp_port'     => $this->config->get('config_mail_smtp_port'),
+				'smtp_timeout'  => $this->config->get('config_mail_smtp_timeout')
+			];
 
-		$mail->setTo($order_info['email']);
-		$mail->setFrom($from);
-		$mail->setSender(html_entity_decode($order_info['store_name'], ENT_QUOTES, 'UTF-8'));
-		$mail->setSubject(html_entity_decode(sprintf($language->get('text_subject'), $order_info['store_name'], $order_info['order_id']), ENT_QUOTES, 'UTF-8'));
-		$mail->setText($this->load->view('mail/order_edit', $data));
-		$mail->send();
+			$mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'), $mail_option);
+			$mail->setTo($order_info['email']);
+			$mail->setFrom($from);
+			$mail->setSender($store_name);
+			$mail->setSubject($subject);
+			$mail->setHtml($this->load->view('mail/order_history', $data));
+			$mail->send();
+		}
 	}
 
-	// catalog/model/checkout/order/addHistory/before
-	public function alert(&$route, &$args) {
+	/**
+	 * Alert
+	 *
+	 * @param string            $route
+	 * @param array<int, mixed> $args
+	 *
+	 * Event called catalog/model/checkout/order/addHistory/before
+	 *
+	 * @throws \Exception
+	 *
+	 * @return void
+	 */
+	public function alert(string &$route, array &$args): void {
 		if (isset($args[0])) {
 			$order_id = $args[0];
 		} else {
@@ -371,14 +520,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		if ($order_info && !$order_info['order_status_id'] && $order_status_id && in_array('order', (array)$this->config->get('config_mail_alert'))) {
 			$this->load->language('mail/order_alert');
 
-			// HTML Mail
-			$data['text_received'] = $this->language->get('text_received');
-			$data['text_order_id'] = $this->language->get('text_order_id');
-			$data['text_date_added'] = $this->language->get('text_date_added');
-			$data['text_order_status'] = $this->language->get('text_order_status');
-			$data['text_product'] = $this->language->get('text_product');
-			$data['text_total'] = $this->language->get('text_total');
-			$data['text_comment'] = $this->language->get('text_comment');
+			$subject = html_entity_decode(sprintf($this->language->get('text_subject'), $this->config->get('config_name'), $order_info['order_id']), ENT_QUOTES, 'UTF-8');
 
 			$data['order_id'] = $order_info['order_id'];
 			$data['date_added'] = date($this->language->get('date_format_short'), strtotime($order_info['date_added']));
@@ -389,17 +531,6 @@ class Order extends \Opencart\System\Engine\Controller {
 				$data['order_status'] = $order_status_query->row['name'];
 			} else {
 				$data['order_status'] = '';
-			}
-
-			$data['store_url'] = $this->config->get('config_url');
-			$data['store'] = html_entity_decode($this->config->get('config_name'), ENT_QUOTES, 'UTF-8');
-
-			$this->load->model('tool/image');
-
-			if (is_file(DIR_IMAGE . html_entity_decode($this->config->get('config_logo'), ENT_QUOTES, 'UTF-8'))) {
-				$data['logo'] = $this->model_tool_image->resize(html_entity_decode($this->config->get('config_logo'), ENT_QUOTES, 'UTF-8'), $this->config->get('theme_default_image_location_width'), $this->config->get('theme_default_image_cart_height'));
-			} else {
-				$data['logo'] = '';
 			}
 
 			$this->load->model('tool/upload');
@@ -428,16 +559,43 @@ class Order extends \Opencart\System\Engine\Controller {
 
 					$option_data[] = [
 						'name'  => $order_option['name'],
-						'value' => (utf8_strlen($value) > 20 ? utf8_substr($value, 0, 20) . '..' : $value)
+						'value' => (oc_strlen($value) > 20 ? oc_substr($value, 0, 20) . '..' : $value)
 					];
 				}
 
+				$description = '';
+
+				$subscription_info = $this->model_checkout_order->getSubscription($order_info['order_id'], $order_product['order_product_id']);
+
+				if ($subscription_info) {
+					if ($subscription_info['trial_status']) {
+						$trial_price = $this->currency->format($subscription_info['trial_price'] + ($this->config->get('config_tax') ? $subscription_info['trial_tax'] : 0), $this->session->data['currency']);
+						$trial_cycle = $subscription_info['trial_cycle'];
+						$trial_frequency = $this->language->get('text_' . $subscription_info['trial_frequency']);
+						$trial_duration = $subscription_info['trial_duration'];
+
+						$description .= sprintf($this->language->get('text_subscription_trial'), $trial_price, $trial_cycle, $trial_frequency, $trial_duration);
+					}
+
+					$price = $this->currency->format($subscription_info['price'] + ($this->config->get('config_tax') ? $subscription_info['tax'] : 0), $this->session->data['currency']);
+					$cycle = $subscription_info['cycle'];
+					$frequency = $this->language->get('text_' . $subscription_info['frequency']);
+					$duration = $subscription_info['duration'];
+
+					if ($duration) {
+						$description .= sprintf($this->language->get('text_subscription_duration'), $price, $cycle, $frequency, $duration);
+					} else {
+						$description .= sprintf($this->language->get('text_subscription_cancel'), $price, $cycle, $frequency);
+					}
+				}
+
 				$data['products'][] = [
-					'name'     => $order_product['name'],
-					'model'    => $order_product['model'],
-					'quantity' => $order_product['quantity'],
-					'option'   => $option_data,
-					'total'    => html_entity_decode($this->currency->format($order_product['total'] + ($this->config->get('config_tax') ? ($order_product['tax'] * $order_product['quantity']) : 0), $order_info['currency_code'], $order_info['currency_value']), ENT_NOQUOTES, 'UTF-8')
+					'name'         => $order_product['name'],
+					'model'        => $order_product['model'],
+					'quantity'     => $order_product['quantity'],
+					'option'       => $option_data,
+					'subscription' => $description,
+					'total'        => html_entity_decode($this->currency->format($order_product['total'] + ($this->config->get('config_tax') ? $order_product['tax'] * $order_product['quantity'] : 0), $order_info['currency_code'], $order_info['currency_value']), ENT_NOQUOTES, 'UTF-8')
 				];
 			}
 
@@ -463,30 +621,37 @@ class Order extends \Opencart\System\Engine\Controller {
 				];
 			}
 
-			$data['comment'] = strip_tags($order_info['comment']);
+			$data['comment'] = nl2br($order_info['comment']);
 
-			$mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'));
-			$mail->parameter = $this->config->get('config_mail_parameter');
-			$mail->smtp_hostname = $this->config->get('config_mail_smtp_hostname');
-			$mail->smtp_username = $this->config->get('config_mail_smtp_username');
-			$mail->smtp_password = html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8');
-			$mail->smtp_port = $this->config->get('config_mail_smtp_port');
-			$mail->smtp_timeout = $this->config->get('config_mail_smtp_timeout');
+			$data['store'] = html_entity_decode($order_info['store_name'], ENT_QUOTES, 'UTF-8');
+			$data['store_url'] = $order_info['store_url'];
 
-			$mail->setTo($this->config->get('config_email'));
-			$mail->setFrom($this->config->get('config_email'));
-			$mail->setSender(html_entity_decode($order_info['store_name'], ENT_QUOTES, 'UTF-8'));
-			$mail->setSubject(html_entity_decode(sprintf($this->language->get('text_subject'), $this->config->get('config_name'), $order_info['order_id']), ENT_QUOTES, 'UTF-8'));
-			$mail->setText($this->load->view('mail/order_alert', $data));
-			$mail->send();
+			if ($this->config->get('config_mail_engine')) {
+				$mail_option = [
+					'parameter'     => $this->config->get('config_mail_parameter'),
+					'smtp_hostname' => $this->config->get('config_mail_smtp_hostname'),
+					'smtp_username' => $this->config->get('config_mail_smtp_username'),
+					'smtp_password' => html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8'),
+					'smtp_port'     => $this->config->get('config_mail_smtp_port'),
+					'smtp_timeout'  => $this->config->get('config_mail_smtp_timeout')
+				];
 
-			// Send to additional alert emails
-			$emails = explode(',', $this->config->get('config_mail_alert_email'));
+				$mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'), $mail_option);
+				$mail->setTo($this->config->get('config_email'));
+				$mail->setFrom($this->config->get('config_email'));
+				$mail->setSender(html_entity_decode($order_info['store_name'], ENT_QUOTES, 'UTF-8'));
+				$mail->setSubject($subject);
+				$mail->setHtml($this->load->view('mail/order_alert', $data));
+				$mail->send();
 
-			foreach ($emails as $email) {
-				if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-					$mail->setTo($email);
-					$mail->send();
+				// Send to additional alert emails
+				$emails = explode(',', (string)$this->config->get('config_mail_alert_email'));
+
+				foreach ($emails as $email) {
+					if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+						$mail->setTo(trim($email));
+						$mail->send();
+					}
 				}
 			}
 		}

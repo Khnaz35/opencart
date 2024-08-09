@@ -1,13 +1,23 @@
 <?php
-namespace Opencart\Application\Model\Tool;
+namespace Opencart\Admin\Model\Tool;
+/**
+ * Class Backup
+ *
+ * @package Opencart\Admin\Model\Tool
+ */
 class Backup extends \Opencart\System\Engine\Model {
-	public function getTables() {
+	/**
+	 * Get Tables
+	 *
+	 * @return array<int, string>
+	 */
+	public function getTables(): array {
 		$table_data = [];
 
 		$query = $this->db->query("SHOW TABLES FROM `" . DB_DATABASE . "`");
 
 		foreach ($query->rows as $result) {
-			if (isset($result['Tables_in_' . DB_DATABASE]) && utf8_substr($result['Tables_in_' . DB_DATABASE], 0, strlen(DB_PREFIX)) == DB_PREFIX) {
+			if (isset($result['Tables_in_' . DB_DATABASE]) && substr($result['Tables_in_' . DB_DATABASE], 0, strlen(DB_PREFIX)) == DB_PREFIX) {
 				$table_data[] = $result['Tables_in_' . DB_DATABASE];
 			}
 		}
@@ -15,7 +25,16 @@ class Backup extends \Opencart\System\Engine\Model {
 		return $table_data;
 	}
 
-	public function getRecords($table, $start = 0, $limit = 100) {
+	/**
+	 * Get Records
+	 *
+	 * @param string $table
+	 * @param int    $start
+	 * @param int    $limit
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getRecords(string $table, int $start = 0, int $limit = 100): array {
 		if ($start < 0) {
 			$start = 0;
 		}
@@ -33,11 +52,18 @@ class Backup extends \Opencart\System\Engine\Model {
 		}
 	}
 
-	public function getTotalRecords($table) {
+	/**
+	 * Get Total Records
+	 *
+	 * @param string $table
+	 *
+	 * @return int
+	 */
+	public function getTotalRecords(string $table): int {
 		$query = $this->db->query("SELECT COUNT(*) AS `total` FROM `" . $table . "`");
 
 		if ($query->num_rows) {
-			return $query->row['total'];
+			return (int)$query->row['total'];
 		} else {
 			return 0;
 		}

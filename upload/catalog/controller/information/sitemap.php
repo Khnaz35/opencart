@@ -1,7 +1,15 @@
 <?php
-namespace Opencart\Application\Controller\Information;
+namespace Opencart\Catalog\Controller\Information;
+/**
+ * Class Sitemap
+ *
+ * @package Opencart\Catalog\Controller\Information
+ */
 class Sitemap extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * @return void
+	 */
+	public function index(): void {
 		$this->load->language('information/sitemap');
 
 		$this->document->setTitle($this->language->get('heading_title'));
@@ -56,12 +64,12 @@ class Sitemap extends \Opencart\System\Engine\Controller {
 		}
 
 		$data['special'] = $this->url->link('product/special', 'language=' . $this->config->get('config_language'));
-		$data['account'] = $this->url->link('account/account', 'language=' . $this->config->get('config_language'));
-		$data['edit'] = $this->url->link('account/edit', 'language=' . $this->config->get('config_language'));
-		$data['password'] = $this->url->link('account/password', 'language=' . $this->config->get('config_language'));
-		$data['address'] = $this->url->link('account/address', 'language=' . $this->config->get('config_language'));
-		$data['history'] = $this->url->link('account/order', 'language=' . $this->config->get('config_language'));
-		$data['download'] = $this->url->link('account/download', 'language=' . $this->config->get('config_language'));
+		$data['account'] = $this->url->link('account/account', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''));
+		$data['edit'] = $this->url->link('account/edit', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''));
+		$data['password'] = $this->url->link('account/password', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''));
+		$data['address'] = $this->url->link('account/address', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''));
+		$data['history'] = $this->url->link('account/order', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''));
+		$data['download'] = $this->url->link('account/download', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''));
 		$data['cart'] = $this->url->link('checkout/cart', 'language=' . $this->config->get('config_language'));
 		$data['checkout'] = $this->url->link('checkout/checkout', 'language=' . $this->config->get('config_language'));
 		$data['search'] = $this->url->link('product/search', 'language=' . $this->config->get('config_language'));

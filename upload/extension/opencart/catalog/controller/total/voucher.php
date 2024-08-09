@@ -1,9 +1,23 @@
 <?php
-namespace Opencart\Application\Controller\Extension\Opencart\Total;
+namespace Opencart\Catalog\Controller\Extension\Opencart\Total;
+/**
+ * Class Voucher
+ *
+ * @package Opencart\Catalog\Controller\Extension\Opencart\Total
+ */
 class Voucher extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * Index
+	 *
+	 * @return string
+	 */
+	public function index(): string {
 		if ($this->config->get('total_voucher_status')) {
 			$this->load->language('extension/opencart/total/voucher');
+
+			$data['save'] = $this->url->link('extension/opencart/total/voucher.save', 'language=' . $this->config->get('config_language'), true);
+			$data['remove'] = $this->url->link('extension/opencart/total/voucher.remove', 'language=' . $this->config->get('config_language'), true);
+			$data['list'] = $this->url->link('checkout/cart.list', 'language=' . $this->config->get('config_language'), true);
 
 			if (isset($this->session->data['voucher'])) {
 				$data['voucher'] = $this->session->data['voucher'];
@@ -13,33 +27,76 @@ class Voucher extends \Opencart\System\Engine\Controller {
 
 			return $this->load->view('extension/opencart/total/voucher', $data);
 		}
+
+		return '';
 	}
 
-	public function voucher() {
+	/**
+	 * Save
+	 *
+	 * @return void
+	 */
+	public function save(): void {
 		$this->load->language('extension/opencart/total/voucher');
 
 		$json = [];
 
 		if (isset($this->request->post['voucher'])) {
-			$voucher = $this->request->post['voucher'];
+			$voucher = (string)$this->request->post['voucher'];
 		} else {
 			$voucher = '';
 		}
 
-		$this->load->model('account/voucher');
+		if (!$this->config->get('total_voucher_status')) {
+			$json['error'] = $this->language->get('error_status');
+		}
 
-		$voucher_info = $this->model_account_voucher->getVoucher($voucher);
+		$this->load->model('checkout/voucher');
 
-		if (empty($this->request->post['voucher'])) {
-			$json['error'] = $this->language->get('error_empty');
-		} elseif ($voucher_info) {
-			$this->session->data['voucher'] = $this->request->post['voucher'];
+		$voucher_info = $this->model_checkout_voucher->getVoucher($voucher);
 
-			$this->session->data['success'] = $this->language->get('text_success');
-
-			$json['redirect'] = redirect_link($this->url->link('checkout/cart', 'language=' . $this->config->get('config_language')));
-		} else {
+		if (!$voucher_info) {
 			$json['error'] = $this->language->get('error_voucher');
+		}
+
+		if (!$json) {
+			$json['success'] = $this->language->get('text_success');
+
+			$this->session->data['voucher'] = $voucher;
+
+			unset($this->session->data['shipping_method']);
+			unset($this->session->data['shipping_methods']);
+			unset($this->session->data['payment_method']);
+			unset($this->session->data['payment_methods']);
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Remove
+	 *
+	 * @return void
+	 */
+	public function remove() {
+		$this->load->language('extension/opencart/total/voucher');
+
+		$json = [];
+
+		if (!isset($this->session->data['voucher'])) {
+			$json['error'] = $this->language->get('error_remove');
+		}
+
+		if (!$json) {
+			$json['success'] = $this->language->get('text_remove');
+
+			unset($this->session->data['voucher']);
+
+			unset($this->session->data['shipping_method']);
+			unset($this->session->data['shipping_methods']);
+			unset($this->session->data['payment_method']);
+			unset($this->session->data['payment_methods']);
 		}
 
 		$this->response->addHeader('Content-Type: application/json');

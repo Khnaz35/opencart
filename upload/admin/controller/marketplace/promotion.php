@@ -1,14 +1,24 @@
 <?php
-namespace Opencart\Application\Controller\Marketplace;
+namespace Opencart\Admin\Controller\Marketplace;
+/**
+ * Class Promotion
+ *
+ * @package Opencart\Admin\Controller\Marketplace
+ */
 class Promotion extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * Index
+	 *
+	 * @return string
+	 */
+	public function index(): string {
 		$this->load->language('marketplace/promotion');
 
 		if (isset($this->request->get['type'])) {
 			$type = $this->request->get['type'];
 		} else {
 			// Just in case there are any direct calls to methods we need to remove them to get the extension type
-			$pos = strrpos($this->request->get['route'], '|');
+			$pos = strrpos($this->request->get['route'], '.');
 
 			if ($pos !== false) {
 				$route = substr($this->request->get['route'], 0, $pos);
@@ -33,12 +43,14 @@ class Promotion extends \Opencart\System\Engine\Controller {
 
 			$response = curl_exec($curl);
 
+			$status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
 			curl_close($curl);
 
-			if ($response) {
+			if ($status == 200) {
 				$promotion = json_decode($response, true);
 			} else {
-				$promotion = '';
+				$promotion = [];
 			}
 
 			$this->cache->set('promotion.' . $type, $promotion, 3600 * 24);
@@ -60,21 +72,21 @@ class Promotion extends \Opencart\System\Engine\Controller {
 
 				// Download
 				if (!$extension_install_info) {
-					$download = $this->url->link('marketplace/marketplace|download', 'user_token=' . $this->session->data['user_token'] . '&extension_id=' . $result['extension_id'] . '&extension_download_id=' . $result['extension_download_id']);
+					$download = $this->url->link('marketplace/marketplace.download', 'user_token=' . $this->session->data['user_token'] . '&extension_id=' . $result['extension_id'] . '&extension_download_id=' . $result['extension_download_id']);
 				} else {
 					$download = '';
 				}
 
 				// Install
 				if ($extension_install_info && !$extension_install_info['status']) {
-					$install = $this->url->link('marketplace/installer|install', 'user_token=' . $this->session->data['user_token'] . '&extension_install_id=' . $extension_install_info['extension_install_id']);
+					$install = $this->url->link('marketplace/installer.install', 'user_token=' . $this->session->data['user_token'] . '&extension_install_id=' . $extension_install_info['extension_install_id']);
 				} else {
 					$install = '';
 				}
 
 				// Delete
 				if ($extension_install_info && !$extension_install_info['status']) {
-					$delete = $this->url->link('marketplace/installer|delete', 'user_token=' . $this->session->data['user_token'] . '&extension_install_id=' . $extension_install_info['extension_install_id']);
+					$delete = $this->url->link('marketplace/installer.delete', 'user_token=' . $this->session->data['user_token'] . '&extension_install_id=' . $extension_install_info['extension_install_id']);
 				} else {
 					$delete = '';
 				}
@@ -82,7 +94,7 @@ class Promotion extends \Opencart\System\Engine\Controller {
 				if (!$extension_install_info || !$extension_install_info['status']) {
 					$data['extensions'][] = [
 						'name'     => $result['name'],
-						'href'     => $this->url->link('marketplace/marketplace|info', 'user_token=' . $this->session->data['user_token'] . '&extension_id=' . $result['extension_id']),
+						'href'     => $this->url->link('marketplace/marketplace.info', 'user_token=' . $this->session->data['user_token'] . '&extension_id=' . $result['extension_id']),
 						'download' => $download,
 						'install'  => $install,
 						'delete'   => $delete

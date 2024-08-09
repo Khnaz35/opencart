@@ -1,67 +1,71 @@
 <?php
 /**
  * @package   OpenCart
+ *
  * @author    Daniel Kerr
- * @copyright Copyright (c) 2005 - 2017, OpenCart, Ltd. (https://www.opencart.com/)
+ * @copyright Copyright (c) 2005 - 2022, OpenCart, Ltd. (https://www.opencart.com/)
  * @license   https://opensource.org/licenses/GPL-3.0
  * @author    Daniel Kerr
+ *
  * @see       https://www.opencart.com
  */
-
-/**
- * URL class.
- */
 namespace Opencart\System\Library;
+/**
+ * Class URL
+ */
 class Url {
-	/** @var string */
-	private $url;
-	/** @var Controller[] */
-	private $rewrite = [];
+	/**
+	 * @var string
+	 */
+	private string $url;
+	/**
+	 * @var array<int, object>
+	 */
+	private array $rewrite = [];
 
 	/**
-	 * Constructor.
+	 * Constructor
 	 *
 	 * @param string $url
-	 * @param string $ssl Depricated
 	 */
-	public function __construct($url) {
+	public function __construct(string $url) {
 		$this->url = $url;
 	}
 
 	/**
+	 * Add Rewrite
+	 *
 	 * Add a rewrite method to the URL system
 	 *
-	 * @param Controller $rewrite
+	 * @param \Opencart\System\Engine\Controller $rewrite
 	 *
 	 * @return void
 	 */
-	public function addRewrite($rewrite) {
-		$this->rewrite[] = $rewrite;
+	public function addRewrite(object $rewrite): void {
+		if (is_callable([$rewrite, 'rewrite'])) {
+			$this->rewrite[] = $rewrite;
+		}
 	}
 
 	/**
+	 * Link
+	 *
 	 * Generates a URL
 	 *
-	 * @param string        $route
-	 * @param string|array	$args
-	 * @param bool			$js
+	 * @param string $route
+	 * @param mixed  $args
+	 * @param bool   $js
 	 *
 	 * @return string
 	 */
-	public function link($route, $args = '', $js = false) {
-		$url = $this->url . 'index.php?route=' . (string)$route;
+	public function link(string $route, $args = '', bool $js = false): string {
+		$url = $this->url . 'index.php?route=' . $route;
 
 		if ($args) {
-			if (!$js) {
-				$amp = '&amp;';
-			} else {
-				$amp = '&';
-			}
-
 			if (is_array($args)) {
-				$url .= $amp . str_replace('%2F', '/', http_build_query($args, '', $amp));
+				$url .= '&' . http_build_query($args);
 			} else {
-				$url .= str_replace('&', $amp, '&' . ltrim($args, '&'));
+				$url .= '&' . trim($args, '&');
 			}
 		}
 
@@ -69,6 +73,10 @@ class Url {
 			$url = $rewrite->rewrite($url);
 		}
 
-		return $url;
+		if (!$js) {
+			return str_replace('&', '&amp;', $url);
+		} else {
+			return $url;
+		}
 	}
 }

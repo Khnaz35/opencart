@@ -1,111 +1,143 @@
 <?php
 namespace Opencart\System\Library\DB;
-final class PDO {
-	private $connection;
-	private $statement;
+/**
+ * Class PDO
+ *
+ * @package Opencart\System\Library\DB
+ */
+class PDO {
+	/**
+	 * @var \PDO|null
+	 */
+	private ?\PDO $connection;
+	/**
+	 * @var array<string, string>
+	 */
+	private array $data = [];
+	/**
+	 * @var int
+	 */
+	private int $affected;
 
-	public function __construct($hostname, $username, $password, $database, $port = '3306') {
+	/**
+	 * Constructor
+	 *
+	 * @param string $hostname
+	 * @param string $username
+	 * @param string $password
+	 * @param string $database
+	 * @param string $port
+	 */
+	public function __construct(string $hostname, string $username, string $password, string $database, string $port = '') {
+		if (!$port) {
+			$port = '3306';
+		}
+
 		try {
-			$this->connection = @new \PDO("mysql:host=" . $hostname . ";port=" . $port . ";dbname=" . $database, $username, $password, array(\PDO::ATTR_PERSISTENT => true));
+			$pdo = new \PDO('mysql:host=' . $hostname . ';port=' . $port . ';dbname=' . $database . ';charset=utf8mb4', $username, $password, [\PDO::ATTR_PERSISTENT => false, \PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4 COLLATE utf8mb4_general_ci']);
 		} catch (\PDOException $e) {
 			throw new \Exception('Error: Could not make a database link using ' . $username . '@' . $hostname . '!');
 		}
 
-		$this->connection->exec("SET NAMES 'utf8'");
-		$this->connection->exec("SET CHARACTER SET utf8");
-		$this->connection->exec("SET CHARACTER_SET_CONNECTION=utf8");
-		$this->connection->exec("SET SQL_MODE = ''");
+		$this->connection = $pdo;
+
+		$this->query("SET SESSION sql_mode = 'NO_ZERO_IN_DATE,NO_ENGINE_SUBSTITUTION'");
+		$this->query("SET FOREIGN_KEY_CHECKS = 0");
+
+		// Sync PHP and DB time zones
+		$this->query("SET `time_zone` = '" . $this->escape(date('P')) . "'");
 	}
 
-	public function execute() {
-		try {
-			if ($this->statement && $this->statement->execute()) {
-				$data = [];
+	/**
+	 * Query
+	 *
+	 * @param string $sql
+	 *
+	 * @return \stdClass|true
+	 */
+	public function query(string $sql) {
+		$sql = preg_replace('/(?:\'\:)([a-z0-9]*.)(?:\')/', ':$1', $sql);
 
-				while ($row = $this->statement->fetch(\PDO::FETCH_ASSOC)) {
-					$data[] = $row;
-				}
-
-				$result = new \stdClass();
-				$result->row = (isset($data[0])) ? $data[0] : [];
-				$result->rows = $data;
-				$result->num_rows = $this->statement->rowCount();
-			}
-		} catch (\PDOException $e) {
-			throw new \Exception('Error: ' . $e->getMessage() . ' Error Code : ' . $e->getCode());
-		}
-	}
-
-	public function query($sql, $params = []) {
-		$this->statement = $this->connection->prepare($sql);
-
-		$result = false;
+		$statement = $this->connection->prepare($sql);
 
 		try {
-			if ($this->statement && $this->statement->execute($params)) {
-				$data = [];
+			if ($statement && $statement->execute($this->data)) {
+				$this->data = [];
 
-				while ($row = $this->statement->fetch(\PDO::FETCH_ASSOC)) {
-					$data[] = $row;
+				if ($statement->columnCount()) {
+					$data = $statement->fetchAll(\PDO::FETCH_ASSOC);
+					$statement->closeCursor();
+
+					$result = new \stdClass();
+					$result->row = $data[0] ?? [];
+					$result->rows = $data;
+					$result->num_rows = count($data);
+					$this->affected = 0;
+
+					return $result;
+				} else {
+					$this->affected = $statement->rowCount();
+					$statement->closeCursor();
+
+					return true;
 				}
-
-				$result = new \stdClass();
-				$result->row = (isset($data[0]) ? $data[0] : []);
-				$result->rows = $data;
-				$result->num_rows = $this->statement->rowCount();
+			} else {
+				return true;
 			}
 		} catch (\PDOException $e) {
-			throw new \Exception('Error: ' . $e->getMessage() . ' Error Code : ' . $e->getCode() . ' <br />' . $sql);
-		}
-
-		if ($result) {
-			return $result;
-		} else {
-			$result = new \stdClass();
-			$result->row = [];
-			$result->rows = [];
-			$result->num_rows = 0;
-
-			return $result;
+			throw new \Exception('Error: ' . $e->getMessage() . ' <br/>Error Code : ' . $e->getCode() . ' <br/>' . $sql);
 		}
 	}
 
-	public function prepare($sql) {
-		$this->statement = $this->connection->prepare($sql);
+	/**
+	 * Escape
+	 *
+	 * @param string $value
+	 *
+	 * @return string
+	 */
+	public function escape(string $value): string {
+		$key = ':' . count($this->data);
+
+		$this->data[$key] = $value;
+
+		return $key;
 	}
 
-	public function bindParam($parameter, $variable, $data_type = \PDO::PARAM_STR, $length = 0) {
-		if ($length) {
-			$this->statement->bindParam($parameter, $variable, $data_type, $length);
-		} else {
-			$this->statement->bindParam($parameter, $variable, $data_type);
-		}
+	/**
+	 * countAffected
+	 *
+	 * @return int
+	 */
+	public function countAffected(): int {
+		return $this->affected;
 	}
 
-	public function escape($value) {
-		return str_replace(["\\", "\0", "\n", "\r", "\x1a", "'", '"'], ["\\\\", "\\0", "\\n", "\\r", "\Z", "\'", '\"'], $value);
+	/**
+	 * getLastId
+	 *
+	 * @return ?int
+	 */
+	public function getLastId(): ?int {
+		$id = $this->connection->lastInsertId();
+
+		return $id ? (int)$id : null;
 	}
 
-	public function countAffected() {
-		if ($this->statement) {
-			return $this->statement->rowCount();
-		} else {
-			return 0;
-		}
+	/**
+	 * isConnected
+	 *
+	 * @return bool
+	 */
+	public function isConnected(): bool {
+		return $this->connection !== null;
 	}
 
-	public function getLastId() {
-		return $this->connection->lastInsertId();
-	}
-
-	public function isConnected() {
-		if ($this->connection) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
+	/**
+	 * Destructor
+	 *
+	 * Closes the DB connection when this object is destroyed.
+	 */
 	public function __destruct() {
 		$this->connection = null;
 	}

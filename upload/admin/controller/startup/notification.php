@@ -1,7 +1,17 @@
 <?php
-namespace Opencart\Application\Controller\Common;
+namespace Opencart\Admin\Controller\Common;
+/**
+ * Class Notification
+ *
+ * @package Opencart\Admin\Controller\Startup
+ */
 class Notification extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * Index
+	 *
+	 * @return void
+	 */
+	public function index(): void {
 		if (empty($this->request->cookie['notification'])) {
 			$curl = curl_init();
 
@@ -15,35 +25,37 @@ class Notification extends \Opencart\System\Engine\Controller {
 
 			$response = curl_exec($curl);
 
+			$status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
 			curl_close($curl);
 
-			if ($response) {
+			if ($status == 200) {
 				$notification = json_decode($response, true);
 			} else {
-				$notification = '';
+				$notification = [];
 			}
 
 			if (isset($notification['notification'])) {
+				$this->load->model('tool/notification');
 				foreach ($notification['notifications'] as $result) {
-					$notification_info = $this->model_notification->addNotification($result['notification_id']);
+					$notification_info = $this->model_tool_notification->addNotification($result['notification_id']);
 
-					if (!$notification_info){
-						$this->model_notification->addNotification($result);
+					if (!$notification_info) {
+						$this->model_tool_notification->addNotification($result);
 					}
 				}
 			}
 
 			// Only grab the
 			$option = [
-				'max-age'  => time() + 3600 * 24 * 7,
-				'path'     => !empty($_SERVER['PHP_SELF']) ? dirname($_SERVER['PHP_SELF']) . '/' : '',
-				'domain'   => $this->request->server['HTTP_HOST'],
+				'expires'  => time() + 3600 * 24 * 7,
+				'path'     => $this->config->get('session_path'),
 				'secure'   => $this->request->server['HTTPS'],
 				'httponly' => false,
-				'SameSite' => 'strict'
+				'SameSite' => $this->config->get('config_session_samesite')
 			];
 
-			oc_setcookie('notification', true, $option);
+			setcookie('notification', '1', $option);
 		}
 	}
 }

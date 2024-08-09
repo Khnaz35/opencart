@@ -1,77 +1,101 @@
 <?php
-namespace Opencart\Application\Model\Catalog;
+namespace Opencart\Admin\Model\Catalog;
+/**
+ * Class Option
+ *
+ * @package Opencart\Admin\Model\Catalog
+ */
 class Option extends \Opencart\System\Engine\Model {
-	public function addOption($data) {
+	/**
+	 * Add Option
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return int
+	 */
+	public function addOption(array $data): int {
 		$this->db->query("INSERT INTO `" . DB_PREFIX . "option` SET `type` = '" . $this->db->escape((string)$data['type']) . "', `sort_order` = '" . (int)$data['sort_order'] . "'");
 
 		$option_id = $this->db->getLastId();
 
 		foreach ($data['option_description'] as $language_id => $value) {
-			$this->db->query("INSERT INTO `" . DB_PREFIX . "option_description` SET `option_id` = '" . (int)$option_id . "', `language_id` = '" . (int)$language_id . "', `name` = '" . $this->db->escape($value['name']) . "'");
+			$this->model_catalog_option->addDescription($option_id, $language_id, $value);
 		}
 
 		if (isset($data['option_value'])) {
 			foreach ($data['option_value'] as $option_value) {
-				$this->db->query("INSERT INTO `" . DB_PREFIX . "option_value` SET `option_id` = '" . (int)$option_id . "', `image` = '" . $this->db->escape(html_entity_decode($option_value['image'], ENT_QUOTES, 'UTF-8')) . "', `sort_order` = '" . (int)$option_value['sort_order'] . "'");
-
-				$option_value_id = $this->db->getLastId();
-
-				foreach ($option_value['option_value_description'] as $language_id => $option_value_description) {
-					$this->db->query("INSERT INTO `" . DB_PREFIX . "option_value_description` SET `option_value_id` = '" . (int)$option_value_id . "', `language_id` = '" . (int)$language_id . "', `option_id` = '" . (int)$option_id . "', `name` = '" . $this->db->escape($option_value_description['name']) . "'");
-				}
+				$this->model_catalog_option->addValue($option_id, $option_value);
 			}
 		}
 
 		return $option_id;
 	}
 
-	public function editOption($option_id, $data) {
+	/**
+	 * Edit Option
+	 *
+	 * @param int                  $option_id
+	 * @param array<string, mixed> $data
+	 *
+	 * @return void
+	 */
+	public function editOption(int $option_id, array $data): void {
 		$this->db->query("UPDATE `" . DB_PREFIX . "option` SET `type` = '" . $this->db->escape((string)$data['type']) . "', `sort_order` = '" . (int)$data['sort_order'] . "' WHERE `option_id` = '" . (int)$option_id . "'");
 
-		$this->db->query("DELETE FROM " . DB_PREFIX . "option_description WHERE option_id = '" . (int)$option_id . "'");
+		$this->model_catalog_option->deleteDescriptions($option_id);
 
 		foreach ($data['option_description'] as $language_id => $value) {
-			$this->db->query("INSERT INTO `" . DB_PREFIX . "option_description` SET `option_id` = '" . (int)$option_id . "', `language_id` = '" . (int)$language_id . "', `name` = '" . $this->db->escape($value['name']) . "'");
+			$this->model_catalog_option->addDescription($option_id, $language_id, $value);
 		}
 
-		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_value` WHERE `option_id` = '" . (int)$option_id . "'");
-		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_value_description` WHERE `option_id` = '" . (int)$option_id . "'");
+		$this->model_catalog_option->deleteValues($option_id);
 
 		if (isset($data['option_value'])) {
 			foreach ($data['option_value'] as $option_value) {
-				if ($option_value['option_value_id']) {
-					$this->db->query("INSERT INTO `" . DB_PREFIX . "option_value` SET `option_value_id` = '" . (int)$option_value['option_value_id'] . "', `option_id` = '" . (int)$option_id . "', `image` = '" . $this->db->escape(html_entity_decode($option_value['image'], ENT_QUOTES, 'UTF-8')) . "', `sort_order` = '" . (int)$option_value['sort_order'] . "'");
-				} else {
-					$this->db->query("INSERT INTO `" . DB_PREFIX . "option_value` SET `option_id` = '" . (int)$option_id . "', `image` = '" . $this->db->escape(html_entity_decode($option_value['image'], ENT_QUOTES, 'UTF-8')) . "', `sort_order` = '" . (int)$option_value['sort_order'] . "'");
-				}
-
-				$option_value_id = $this->db->getLastId();
-
-				foreach ($option_value['option_value_description'] as $language_id => $option_value_description) {
-					$this->db->query("INSERT INTO `" . DB_PREFIX . "option_value_description` SET `option_value_id` = '" . (int)$option_value_id . "', `language_id` = '" . (int)$language_id . "', `option_id` = '" . (int)$option_id . "', `name` = '" . $this->db->escape($option_value_description['name']) . "'");
-				}
+				$this->model_catalog_option->addValue($option_id, $option_value);
 			}
 		}
 	}
 
-	public function deleteOption($option_id) {
+	/**
+	 * Delete Option
+	 *
+	 * @param int $option_id
+	 *
+	 * @return void
+	 */
+	public function deleteOption(int $option_id): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "option` WHERE `option_id` = '" . (int)$option_id . "'");
-		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_description` WHERE `option_id` = '" . (int)$option_id . "'");
-		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_value` WHERE `option_id` = '" . (int)$option_id . "'");
-		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_value_description` WHERE `option_id` = '" . (int)$option_id . "'");
+
+		$this->model_catalog_option->deleteDescriptions($option_id);
+		$this->model_catalog_option->deleteValues($option_id);
 	}
 
-	public function getOption($option_id) {
-		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option` o LEFT JOIN `" . DB_PREFIX . "option_description` od ON (o.`option_id` = od.`option_id`) WHERE o.`option_id` = '" . (int)$option_id . "' AND od.`language_id` = '" . (int)$this->config->get('config_language_id') . "'");
+	/**
+	 * Get Option
+	 *
+	 * @param int $option_id
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getOption(int $option_id): array {
+		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option` `o` LEFT JOIN `" . DB_PREFIX . "option_description` `od` ON (`o`.`option_id` = `od`.`option_id`) WHERE `o`.`option_id` = '" . (int)$option_id . "' AND `od`.`language_id` = '" . (int)$this->config->get('config_language_id') . "'");
 
 		return $query->row;
 	}
 
-	public function getOptions($data = []) {
-		$sql = "SELECT * FROM `" . DB_PREFIX . "option` o LEFT JOIN `" . DB_PREFIX . "option_description` od ON (o.`option_id` = od.`option_id`) WHERE od.`language_id` = '" . (int)$this->config->get('config_language_id') . "'";
+	/**
+	 * Get Options
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getOptions(array $data = []): array {
+		$sql = "SELECT * FROM `" . DB_PREFIX . "option` `o` LEFT JOIN `" . DB_PREFIX . "option_description` `od` ON (`o`.`option_id` = `od`.`option_id`) WHERE `od`.`language_id` = '" . (int)$this->config->get('config_language_id') . "'";
 
 		if (!empty($data['filter_name'])) {
-			$sql .= " AND od.`name` LIKE '" . $this->db->escape((string)$data['filter_name']) . "%'";
+			$sql .= " AND LCASE(`od`.`name`) LIKE '" . $this->db->escape(oc_strtolower($data['filter_name']) . '%') . "'";
 		}
 
 		$sort_data = [
@@ -83,7 +107,7 @@ class Option extends \Opencart\System\Engine\Model {
 		if (isset($data['sort']) && in_array($data['sort'], $sort_data)) {
 			$sql .= " ORDER BY " . $data['sort'];
 		} else {
-			$sql .= " ORDER BY od.`name`";
+			$sql .= " ORDER BY `od`.`name`";
 		}
 
 		if (isset($data['order']) && ($data['order'] == 'DESC')) {
@@ -109,28 +133,147 @@ class Option extends \Opencart\System\Engine\Model {
 		return $query->rows;
 	}
 
-	public function getDescriptions($option_id) {
-		$option_data = [];
+	/**
+	 * Get Total Options
+	 *
+	 * @return int
+	 */
+	public function getTotalOptions(): int {
+		$query = $this->db->query("SELECT COUNT(*) AS `total` FROM `" . DB_PREFIX . "option`");
+
+		return (int)$query->row['total'];
+	}
+
+	/**
+	 * Add Description
+	 *
+	 * @param int                  $option_id   primary key
+	 * @param int                  $language_id
+	 * @param array<string, mixed> $data
+	 *
+	 * @return void
+	 */
+	public function addDescription(int $option_id, int $language_id, array $data): void {
+		$this->db->query("INSERT INTO `" . DB_PREFIX . "option_description` SET `option_id` = '" . (int)$option_id . "', `language_id` = '" . (int)$language_id . "', `name` = '" . $this->db->escape($data['name']) . "'");
+	}
+
+	/**
+	 * Delete Descriptions
+	 *
+	 * @param int $option_id
+	 *
+	 * @return void
+	 */
+	public function deleteDescriptions(int $option_id): void {
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_description` WHERE `option_id` = '" . (int)$option_id . "'");
+	}
+
+	/**
+	 * Delete Descriptions By Language ID
+	 *
+	 * @param int $language_id
+	 *
+	 * @return void
+	 */
+	public function deleteDescriptionsByLanguageId(int $language_id): void {
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_description` WHERE `language_id` = '" . (int)$language_id . "'");
+	}
+
+	/**
+	 * Get Descriptions
+	 *
+	 * @param int $option_id
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	public function getDescriptions(int $option_id): array {
+		$description_data = [];
 
 		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option_description` WHERE `option_id` = '" . (int)$option_id . "'");
 
 		foreach ($query->rows as $result) {
-			$option_data[$result['language_id']] = ['name' => $result['name']];
+			$description_data[$result['language_id']] = ['name' => $result['name']];
 		}
 
-		return $option_data;
+		return $description_data;
 	}
 
-	public function getValue($option_value_id) {
-		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option_value` ov LEFT JOIN `" . DB_PREFIX . "option_value_description` ovd ON (ov.`option_value_id` = ovd.`option_value_id`) WHERE ov.`option_value_id` = '" . (int)$option_value_id . "' AND ovd.`language_id` = '" . (int)$this->config->get('config_language_id') . "'");
+	/**
+	 * Get Descriptions By Language ID
+	 *
+	 * @param int $language_id
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	public function getDescriptionsByLanguageId(int $language_id): array {
+		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option_description` WHERE `language_id` = '" . (int)$language_id . "'");
+
+		return $query->rows;
+	}
+
+	/**
+	 * Add Value
+	 *
+	 * @param int                  $option_id
+	 * @param array<string, mixed> $data
+	 */
+	public function addValue(int $option_id, array $data): int {
+		if ($data['option_value_id']) {
+			$this->db->query("INSERT INTO `" . DB_PREFIX . "option_value` SET `option_value_id` = '" . (int)$data['option_value_id'] . "', `option_id` = '" . (int)$option_id . "', `image` = '" . $this->db->escape(html_entity_decode($data['image'], ENT_QUOTES, 'UTF-8')) . "', `sort_order` = '" . (int)$data['sort_order'] . "'");
+		} else {
+			$this->db->query("INSERT INTO `" . DB_PREFIX . "option_value` SET `option_id` = '" . (int)$option_id . "', `image` = '" . $this->db->escape(html_entity_decode($data['image'], ENT_QUOTES, 'UTF-8')) . "', `sort_order` = '" . (int)$data['sort_order'] . "'");
+		}
+
+		$option_value_id = $this->db->getLastId();
+
+		if ($data['option_value_id']) {
+			if (isset($data['option_value_description'])) {
+				foreach ($data['option_value_description'] as $language_id => $option_value_description) {
+					$this->model_catalog_option->addValueDescription($option_value_id, $option_id, $language_id, $option_value_description);
+				}
+			}
+		}
+
+		return $option_value_id;
+	}
+
+	/**
+	 * Delete Values
+	 *
+	 * @param int $option_id
+	 *
+	 * @return void
+	 */
+	public function deleteValues(int $option_id): void {
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_value` WHERE `option_id` = '" . (int)$option_id . "'");
+
+		$this->model_catalog_option->deleteValueDescriptionsByOptionId($option_id);
+	}
+
+	/**
+	 * Get Value
+	 *
+	 * @param int $option_value_id
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getValue(int $option_value_id): array {
+		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option_value` `ov` LEFT JOIN `" . DB_PREFIX . "option_value_description` `ovd` ON (`ov`.`option_value_id` = `ovd`.`option_value_id`) WHERE `ov`.`option_value_id` = '" . (int)$option_value_id . "' AND `ovd`.`language_id` = '" . (int)$this->config->get('config_language_id') . "'");
 
 		return $query->row;
 	}
 
-	public function getValues($option_id) {
+	/**
+	 * Get Values
+	 *
+	 * @param int $option_id
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getValues(int $option_id): array {
 		$option_value_data = [];
 
-		$option_value_query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option_value` ov LEFT JOIN `" . DB_PREFIX . "option_value_description` ovd ON (ov.`option_value_id` = ovd.`option_value_id`) WHERE ov.`option_id` = '" . (int)$option_id . "' AND ovd.`language_id` = '" . (int)$this->config->get('config_language_id') . "' ORDER BY ov.`sort_order`, ovd.`name`");
+		$option_value_query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option_value` `ov` LEFT JOIN `" . DB_PREFIX . "option_value_description` `ovd` ON (`ov`.`option_value_id` = `ovd`.`option_value_id`) WHERE `ov`.`option_id` = '" . (int)$option_id . "' AND `ovd`.`language_id` = '" . (int)$this->config->get('config_language_id') . "' ORDER BY `ov`.`sort_order`, `ovd`.`name`");
 
 		foreach ($option_value_query->rows as $option_value) {
 			$option_value_data[] = [
@@ -144,7 +287,50 @@ class Option extends \Opencart\System\Engine\Model {
 		return $option_value_data;
 	}
 
-	public function getValueDescriptions($option_id) {
+	/**
+	 * Add Value Description
+	 *
+	 * @param int                  $option_value_id
+	 * @param int                  $option_id
+	 * @param int                  $language_id
+	 * @param array<string, mixed> $data
+	 *
+	 * @return void
+	 */
+	public function addValueDescription(int $option_value_id, int $option_id, int $language_id, array $data): void {
+		$this->db->query("INSERT INTO `" . DB_PREFIX . "option_value_description` SET `option_value_id` = '" . (int)$option_value_id . "', `language_id` = '" . (int)$language_id . "', `option_id` = '" . (int)$option_id . "', `name` = '" . $this->db->escape($data['name']) . "'");
+	}
+
+	/**
+	 * Delete Value Descriptions By Option ID
+	 *
+	 * @param int $option_id
+	 *
+	 * @return void
+	 */
+	public function deleteValueDescriptionsByOptionId(int $option_id): void {
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_value_description` WHERE `option_id` = '" . (int)$option_id . "'");
+	}
+
+	/**
+	 * Delete Value Descriptions By Language ID
+	 *
+	 * @param int $language_id
+	 *
+	 * @return void
+	 */
+	public function deleteValueDescriptionsByLanguageId(int $language_id): void {
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "option_value_description` WHERE `language_id` = '" . (int)$language_id . "'");
+	}
+
+	/**
+	 * Get Value Descriptions
+	 *
+	 * @param int $option_id
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getValueDescriptions(int $option_id): array {
 		$option_value_data = [];
 
 		$option_value_query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option_value` WHERE `option_id` = '" . (int)$option_id . "' ORDER BY `sort_order`");
@@ -169,9 +355,16 @@ class Option extends \Opencart\System\Engine\Model {
 		return $option_value_data;
 	}
 
-	public function getTotalOptions() {
-		$query = $this->db->query("SELECT COUNT(*) AS `total` FROM `" . DB_PREFIX . "option`");
+	/**
+	 * Get Value Descriptions By Language ID
+	 *
+	 * @param int $language_id
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	public function getValueDescriptionsByLanguageId(int $language_id): array {
+		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "option_value_description` WHERE `language_id` = '" . (int)$language_id . "'");
 
-		return $query->row['total'];
+		return $query->rows;
 	}
 }

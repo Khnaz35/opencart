@@ -1,8 +1,9 @@
 <?php
 // Text
+$_['text_name']       = 'English (United Kingdom)';
 $_['text_loading']    = 'Loading...';
 
-// Button
+// Buttons
 $_['button_continue'] = 'Continue';
 $_['button_back']     = 'Back';
 

@@ -1,23 +1,44 @@
 <?php
-namespace Opencart\Application\Model\Localisation;
+namespace Opencart\Catalog\Model\Localisation;
+/**
+ * Class OrderStatus
+ *
+ * @package Opencart\Catalog\Model\Localisation
+ */
 class OrderStatus extends \Opencart\System\Engine\Model {
-	public function getOrderStatus($order_status_id) {
+	/**
+	 * Get Order Status
+	 *
+	 * @param int $order_status_id
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getOrderStatus(int $order_status_id): array {
 		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "order_status` WHERE `order_status_id` = '" . (int)$order_status_id . "' AND `language_id` = '" . (int)$this->config->get('config_language_id') . "'");
 
 		return $query->row;
 	}
 
-	public function getOrderStatuses() {
-		$order_status_data = $this->cache->get('order_status.' . (int)$this->config->get('config_language_id'));
+	/**
+	 * Get Order Statuses
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getOrderStatuses(): array {
+		$sql = "SELECT `order_status_id`, `name` FROM `" . DB_PREFIX . "order_status` WHERE `language_id` = '" . (int)$this->config->get('config_language_id') . "' ORDER BY `name`";
+
+		$key = md5($sql);
+
+		$order_status_data = $this->cache->get('order_status.' . $key);
 
 		if (!$order_status_data) {
-			$query = $this->db->query("SELECT `order_status_id`, `name` FROM `" . DB_PREFIX . "order_status` WHERE `language_id` = '" . (int)$this->config->get('config_language_id') . "' ORDER BY `name`");
+			$query = $this->db->query($sql);
 
 			$order_status_data = $query->rows;
 
-			$this->cache->set('order_status.' . (int)$this->config->get('config_language_id'), $order_status_data);
+			$this->cache->set('order_status.' . $key, $order_status_data);
 		}
-		
+
 		return $order_status_data;
 	}
 }

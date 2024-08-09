@@ -1,10 +1,18 @@
 <?php
-namespace Opencart\Application\Controller\Common;
+namespace Opencart\Catalog\Controller\Common;
+/**
+ * Class Currency
+ *
+ * @package Opencart\Catalog\Controller\Common
+ */
 class Currency extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * @return string
+	 */
+	public function index(): string {
 		$this->load->language('common/currency');
 
-		$data['action'] = $this->url->link('common/currency|currency', 'language=' . $this->config->get('config_language'));
+		$data['action'] = $this->url->link('common/currency.save', 'language=' . $this->config->get('config_language'));
 
 		$data['code'] = $this->session->data['currency'];
 
@@ -39,7 +47,7 @@ class Currency extends \Opencart\System\Engine\Controller {
 		$url = '';
 
 		if ($url_data) {
-			$url = '&' . urldecode(http_build_query($url_data, '', '&'));
+			$url .= '&' . urldecode(http_build_query($url_data, '', '&'));
 		}
 
 		$data['redirect'] = $this->url->link($route, $url);
@@ -47,7 +55,12 @@ class Currency extends \Opencart\System\Engine\Controller {
 		return $this->load->view('common/currency', $data);
 	}
 
-	public function currency() {
+	/**
+	 * Save
+	 *
+	 * @return void
+	 */
+	public function save(): void {
 		if (isset($this->request->post['code'])) {
 			$this->session->data['currency'] = $this->request->post['code'];
 
@@ -56,17 +69,23 @@ class Currency extends \Opencart\System\Engine\Controller {
 		}
 
 		$option = [
-			'max-age'  => time() + 60 * 60 * 24 * 30,
+			'expires'  => time() + 60 * 60 * 24 * 30,
 			'path'     => '/',
-			'SameSite' => 'lax'
+			'SameSite' => 'Lax'
 		];
 
-		oc_setcookie('currency', $this->session->data['currency'], $option);
+		setcookie('currency', $this->session->data['currency'], $option);
 
-		if (isset($this->request->post['redirect']) && substr($this->request->post['redirect'], 0, strlen($this->config->get('config_url'))) == $this->config->get('config_url')) {
-			$this->response->redirect(redirect_link($this->request->post['redirect']));
+		if (isset($this->request->post['redirect'])) {
+			$redirect = urldecode(html_entity_decode($this->request->post['redirect'], ENT_QUOTES, 'UTF-8'));
 		} else {
-			$this->response->redirect($this->url->link($this->config->get('action_default')));
+			$redirect = '';
+		}
+
+		if ($redirect && str_starts_with($redirect, $this->config->get('config_url'))) {
+			$this->response->redirect($redirect);
+		} else {
+			$this->response->redirect($this->url->link($this->config->get('action_default'), 'language=' . $this->config->get('config_language')));
 		}
 	}
 }

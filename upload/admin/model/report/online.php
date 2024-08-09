@@ -1,24 +1,36 @@
 <?php
-namespace Opencart\Application\Model\Report;
+namespace Opencart\Admin\Model\Report;
+/**
+ * Class Online
+ *
+ * @package Opencart\Admin\Model\Report
+ */
 class Online extends \Opencart\System\Engine\Model {
-	public function getOnline($data = []) {
-		$sql = "SELECT co.`ip`, co.`customer_id`, co.`url`, co.`referer`, co.`date_added` FROM `" . DB_PREFIX . "customer_online` co LEFT JOIN `" . DB_PREFIX . "customer` c ON (co.`customer_id` = c.`customer_id`)";
+	/**
+	 * Get Online
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getOnline(array $data = []): array {
+		$sql = "SELECT `co`.`ip`, `co`.`customer_id`, `co`.`url`, `co`.`referer`, `co`.`date_added` FROM `" . DB_PREFIX . "customer_online` `co` LEFT JOIN `" . DB_PREFIX . "customer` `c` ON (`co`.`customer_id` = `c`.`customer_id`)";
 
 		$implode = [];
 
 		if (!empty($data['filter_ip'])) {
-			$implode[] = "co.`ip` LIKE '" . $this->db->escape((string)$data['filter_ip']) . "'";
+			$implode[] = "`co`.`ip` LIKE '" . $this->db->escape((string)$data['filter_ip']) . "'";
 		}
 
 		if (!empty($data['filter_customer'])) {
-			$implode[] = "co.`customer_id` > 0 AND CONCAT(c.`firstname`, ' ', c.`lastname`) LIKE '" . $this->db->escape((string)$data['filter_customer']) . "'";
+			$implode[] = "`co`.`customer_id` > '0' AND LCASE(CONCAT(`c`.`firstname`, ' ', `c`.`lastname`)) LIKE '" . $this->db->escape(oc_strtolower($data['filter_customer'])) . "'";
 		}
 
 		if ($implode) {
 			$sql .= " WHERE " . implode(" AND ", $implode);
 		}
 
-		$sql .= " ORDER BY co.`date_added` DESC";
+		$sql .= " ORDER BY `co`.`date_added` DESC";
 
 		if (isset($data['start']) || isset($data['limit'])) {
 			if ($data['start'] < 0) {
@@ -37,17 +49,24 @@ class Online extends \Opencart\System\Engine\Model {
 		return $query->rows;
 	}
 
-	public function getTotalOnline($data = []) {
-		$sql = "SELECT COUNT(*) AS `total` FROM `" . DB_PREFIX . "customer_online` co LEFT JOIN `" . DB_PREFIX . "customer` c ON (co.`customer_id` = c.`customer_id`)";
+	/**
+	 * Get Total Online
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return int
+	 */
+	public function getTotalOnline(array $data = []): int {
+		$sql = "SELECT COUNT(*) AS `total` FROM `" . DB_PREFIX . "customer_online` `co` LEFT JOIN `" . DB_PREFIX . "customer` `c` ON (`co`.`customer_id` = `c`.`customer_id`)";
 
 		$implode = [];
 
 		if (!empty($data['filter_ip'])) {
-			$implode[] = "co.`ip` LIKE '" . $this->db->escape((string)$data['filter_ip']) . "'";
+			$implode[] = "`co`.`ip` LIKE '" . $this->db->escape((string)$data['filter_ip']) . "'";
 		}
 
 		if (!empty($data['filter_customer'])) {
-			$implode[] = "co.`customer_id` > '0' AND CONCAT(c.`firstname`, ' ', c.`lastname`) LIKE '" . $this->db->escape((string)$data['filter_customer']) . "'";
+			$implode[] = "`co`.`customer_id` > '0' AND LCASE(CONCAT(`c`.`firstname`, ' ', `c`.`lastname`)) LIKE '" . $this->db->escape(oc_strtolower($data['filter_customer'])) . "'";
 		}
 
 		if ($implode) {
@@ -56,6 +75,6 @@ class Online extends \Opencart\System\Engine\Model {
 
 		$query = $this->db->query($sql);
 
-		return $query->row['total'];
+		return (int)$query->row['total'];
 	}
 }

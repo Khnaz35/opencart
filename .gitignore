@@ -24,8 +24,8 @@
 !/upload/system/storage/logs/index.html
 
 # Marketplace Files
-/upload/system/storage/marketplace/*
-!/upload/system/storage/marketplace/index.html
+# /upload/system/storage/marketplace/*
+# !/upload/system/storage/marketplace/index.html
 
 # Session Files
 /upload/system/storage/session/*
@@ -35,9 +35,12 @@
 /upload/system/storage/upload/*
 !/upload/system/storage/upload/index.html
 
-# If you want to ignore install file use following lines [on development mode]
-# /upload/install/*
+# CSS Files
+/upload/catalog/view/stylesheet/stylesheet.css
 
 # IDE Project files
-/.idea
-/upload/.idea
+/upload/.idea/*
+/.idea/*
+/.DS_Store
+/.cache
+/.php-cs-fixer.cache

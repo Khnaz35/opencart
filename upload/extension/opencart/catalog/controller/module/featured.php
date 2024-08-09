@@ -1,30 +1,38 @@
 <?php
-namespace Opencart\Application\Controller\Extension\Opencart\Module;
+namespace Opencart\Catalog\Controller\Extension\Opencart\Module;
+/**
+ * Class Featured
+ *
+ * @package Opencart\Catalog\Controller\Extension\Opencart\Module
+ */
 class Featured extends \Opencart\System\Engine\Controller {
-	public function index($setting) {
+	/**
+	 * Index
+	 *
+	 * @param array<string, mixed> $setting
+	 *
+	 * @return string
+	 */
+	public function index(array $setting): string {
 		$this->load->language('extension/opencart/module/featured');
+
+		$data['axis'] = $setting['axis'];
+
+		$data['products'] = [];
 
 		$this->load->model('catalog/product');
 		$this->load->model('tool/image');
 
-		$data['products'] = [];
-
-		if (!$setting['limit']) {
-			$setting['limit'] = 4;
-		}
-
 		if (!empty($setting['product'])) {
-			$product_data = [];
+			$products = [];
 
 			foreach ($setting['product'] as $product_id) {
 				$product_info = $this->model_catalog_product->getProduct($product_id);
 
 				if ($product_info) {
-					$product_data[] = $product_info;
+					$products[] = $product_info;
 				}
 			}
-
-			$products = array_slice($product_data, 0, (int)$setting['limit']);
 
 			foreach ($products as $product) {
 				if ($product['image']) {
@@ -55,12 +63,12 @@ class Featured extends \Opencart\System\Engine\Controller {
 					'product_id'  => $product['product_id'],
 					'thumb'       => $image,
 					'name'        => $product['name'],
-					'description' => utf8_substr(strip_tags(html_entity_decode($product['description'], ENT_QUOTES, 'UTF-8')), 0, $this->config->get('theme_' . $this->config->get('config_theme') . '_product_description_length')) . '..',
+					'description' => oc_substr(trim(strip_tags(html_entity_decode($product['description'], ENT_QUOTES, 'UTF-8'))), 0, $this->config->get('config_product_description_length')) . '..',
 					'price'       => $price,
 					'special'     => $special,
 					'tax'         => $tax,
 					'minimum'     => $product['minimum'] > 0 ? $product['minimum'] : 1,
-					'rating'      => $product['rating'],
+					'rating'      => (int)$product['rating'],
 					'href'        => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $product['product_id'])
 				];
 
@@ -70,6 +78,8 @@ class Featured extends \Opencart\System\Engine\Controller {
 
 		if ($data['products']) {
 			return $this->load->view('extension/opencart/module/featured', $data);
+		} else {
+			return '';
 		}
 	}
 }

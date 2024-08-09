@@ -1,6 +1,6 @@
 <?php
 // Version
-define('VERSION', '4.0.0.0_b');
+define('VERSION', '4.1.0.0');
 
 // Configuration
 if (is_file('config.php')) {
@@ -15,3 +15,6 @@ if (!defined('DIR_APPLICATION')) {
 
 // Startup
 require_once(DIR_SYSTEM . 'startup.php');
+
+// Framework
+require_once(DIR_SYSTEM . 'framework.php');

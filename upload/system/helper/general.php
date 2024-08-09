@@ -1,152 +1,92 @@
 <?php
-/* Compatibility function Due to PHP 7.3 only being the PHP version to be able to use samesite attribute */
-function oc_setcookie(string $key, string $value, $option = []) {
-	if (version_compare(phpversion(), '7.3.0', '>=')) {
-		// PHP need to update their setcookie function.
-		if (isset($option['max-age'])) {
-			$option['expires'] = $option['max-age'];
+// @return string
+function oc_get_ip(): string {
+	$headers = [
+		'HTTP_CF_CONNECTING_IP', // CloudFlare
+		'HTTP_X_FORWARDED_FOR',  // AWS LB and other reverse-proxies
+		'HTTP_X_REAL_IP',
+		'HTTP_X_CLIENT_IP',
+		'HTTP_CLIENT_IP',
+		'HTTP_X_CLUSTER_CLIENT_IP',
+	];
 
-			unset($option['max-age']);
+	foreach ($headers as $header) {
+		if (array_key_exists($header, $_SERVER)) {
+			$ip = $_SERVER[$header];
+
+			// This line might or might not be used.
+			$ip = trim(explode(',', $ip)[0]);
+
+			return $ip;
 		}
-
-		setcookie($key, $value, $option);
-	} else {
-		$string = '';
-
-		if (isset($option['max-age'])) {
-			$string .= '; max-age=' . $option['max-age'];
-		} else {
-			$string .= '; max-age=0';
-		}
-
-		if (!empty($option['path'])) {
-			$string .= '; path=' . $option['path'];
-		}
-
-		if (!empty($option['domain'])) {
-			$string .= '; domain=' . $option['domain'];
-		}
-
-		if (!empty($option['HttpOnly'])) {
-			$string .= '; HttpOnly';
-		}
-
-		if (!empty($option['Secure'])) {
-			$string .= '; Secure';
-		}
-
-		if (isset($option['SameSite'])) {
-			$string .= '; SameSite=' . $option['SameSite'];
-		}
-
-		header('Set-Cookie: ' . rawurlencode($key) . '=' . rawurlencode($value) . $string);
-	}
-}
-
-function token($length = 32) {
-	if (!isset($length) || intval($length) <= 8) {
-		$length = 32;
 	}
 
-	if (function_exists('random_bytes')) {
-		$token = bin2hex(random_bytes($length));
-	}
-
-	if (function_exists('openssl_random_pseudo_bytes')) {
-		$token = bin2hex(openssl_random_pseudo_bytes($length));
-	}
-
-	return substr($token, -$length, $length);
+	return $_SERVER['REMOTE_ADDR'];
 }
 
 /**
- * Backwards support for timing safe hash string comparisons
+ * @param string $string
  *
- * http://php.net/manual/en/function.hash-equals.php
+ * @return string
  */
+function oc_strlen(string $string): int {
+	return mb_strlen($string);
+}
 
-if (!function_exists('hash_equals')) {
-	function hash_equals($known_string, $user_string) {
-		$known_string = (string)$known_string;
-		$user_string = (string)$user_string;
+/**
+ * @param string $string
+ * @param string $needle
+ * @param int    $offset
+ *
+ * @return false|int
+ */
+function oc_strpos(string $string, string $needle, int $offset = 0) {
+	return mb_strpos($string, $needle, $offset);
+}
 
-		if (strlen($known_string) != strlen($user_string)) {
-			return false;
+/**
+ * @param string $string
+ * @param string $needle
+ * @param int    $offset
+ *
+ * @return false|int
+ */
+function oc_strrpos(string $string, string $needle, int $offset = 0) {
+	return mb_strrpos($string, $needle, $offset);
+}
+
+function oc_substr(string $string, int $offset, ?int $length = null): string {
+	return mb_substr($string, $offset, $length);
+}
+
+function oc_strtoupper(string $string): string {
+	return mb_strtoupper($string);
+}
+
+function oc_strtolower(string $string): string {
+	return mb_strtolower($string);
+}
+
+// Other
+function oc_token(int $length = 32): string {
+	return substr(bin2hex(random_bytes($length)), 0, $length);
+}
+
+// Pre PHP8 compatibility
+if (!function_exists('str_starts_with')) {
+	function str_starts_with(string $string, string $find): bool {
+		$substring = substr($string, strlen($find));
+
+		if ($substring === $find) {
+			return true;
 		} else {
-			$res = $known_string ^ $user_string;
-			$ret = 0;
-
-			for ($i = strlen($res) - 1; $i >= 0; $i--) $ret |= ord($res[$i]);
-
-			return !$ret;
+			return false;
 		}
 	}
 }
 
-function date_added($date, $language) {
-	$second = time() - strtotime($date);
-
-	if ($second < 10) {
-		$date_added = sprintf($language['text_just_now'], $second);
-	} elseif ($second) {
-		$date_added = sprintf($language['text_seconds_ago'], $second);
+if (!function_exists('str_ends_with')) {
+	function str_ends_with(string $string, string $find): bool {
+		return substr($string, -strlen($find)) === $find;
 	}
-
-	$minute = floor($second / 60);
-
-	if ($minute == 1) {
-		$date_added = sprintf($language['text_minute_ago'], $minute);
-	} elseif ($minute) {
-		$date_added = sprintf($language['text_minutes_ago'], $minute);
-	}
-
-	$hour = floor($minute / 60);
-
-	if ($hour == 1) {
-		$date_added = sprintf($language['text_hour_ago'], $hour);
-	} elseif ($hour) {
-		$date_added = sprintf($language['text_hours_ago'], $hour);
-	}
-
-	$day = floor($hour / 24);
-
-	if ($day == 1) {
-		$date_added = sprintf($language['text_day_ago'], $day);
-	} elseif ($day) {
-		$date_added = sprintf($language['text_days_ago'], $day);
-	}
-
-	$week = floor($day / 7);
-
-	if ($week == 1) {
-		$date_added = sprintf($language['text_week_ago'], $week);
-	} elseif ($week) {
-		$date_added = sprintf($language['text_weeks_ago'], $week);
-	}
-
-	$month = floor($week / 4);
-
-	if ($month == 1) {
-		$date_added = sprintf($language['text_month_ago'], $month);
-	} elseif ($month) {
-		$date_added = sprintf($language['text_months_ago'], $month);
-	}
-
-	$year = floor($week / 52.1429);
-
-	if ($year == 1) {
-		$date_added = sprintf($language['text_year_ago'], $year);
-	} elseif ($year) {
-		$date_added = sprintf($language['text_years_ago'], $year);
-	}
-
-	return $date_added;
-}
-
-function redirect_link($link) {
-	return str_replace('&amp;', '&', $link);
-}
-
-function get_path($source, $dir) {
-	return utf8_substr(str_replace('\\', '/', realpath($source)), 0, utf8_strlen($dir));
 }

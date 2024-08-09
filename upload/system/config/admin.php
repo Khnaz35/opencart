@@ -8,6 +8,9 @@ $_['db_engine']         = DB_DRIVER; // mysqli, pdo or pgsql
 $_['db_hostname']       = DB_HOSTNAME;
 $_['db_username']       = DB_USERNAME;
 $_['db_password']       = DB_PASSWORD;
+//$_['db_ssl_key']        = DB_SSL_KEY;
+//$_['db_ssl_cert']       = DB_SSL_CERT;
+//$_['db_ssl_ca']         = DB_SSL_CA;
 $_['db_database']       = DB_DATABASE;
 $_['db_port']           = DB_PORT;
 
@@ -30,27 +33,37 @@ $_['action_pre_action'] = [
 	'startup/event',
 	'startup/sass',
 	'startup/login',
+	'startup/authorize',
 	'startup/permission'
 ];
 
 // Actions
-$_['action_default']    = 'common/dashboard';
+$_['action_default']     = 'common/dashboard';
 
 // Action Events
-$_['action_event']      = [
+$_['action_event']       = [
 	'controller/*/before' => [
-		0 => 'event/language|before'
+		0 => 'event/modification.controller',
+		1 => 'event/language.before'
 	],
 	'controller/*/after' => [
-		0 => 'event/language|after'
+		0 => 'event/language.after'
+	],
+	'model/*/before' => [
+		0 => 'event/modification.model'
+		//1 => 'event/debug.before'
 	],
 	//'model/*/after' => [
-	//	0 => 'event/debug|before'
-	//],
-	//'model/*/after' => [
-	//	0 => 'event/debug|after'
+	//	0 => 'event/debug.after'
 	//],
 	'view/*/before' => [
+		0   => 'event/modification.view',
 		999 => 'event/language'
+	],
+	'language/*/before' => [
+		0 => 'event/modification.language'
+	],
+	'language/*/after' => [
+		0 => 'startup/language.after'
 	]
 ];

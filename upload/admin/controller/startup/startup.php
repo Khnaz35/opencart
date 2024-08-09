@@ -1,7 +1,17 @@
 <?php
-namespace Opencart\Application\Controller\Startup;
+namespace Opencart\Admin\Controller\Startup;
+/**
+ * Class Startup
+ *
+ * @package Opencart\Admin\Controller\Startup
+ */
 class Startup extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * Index
+	 *
+	 * @return void
+	 */
+	public function index(): void {
 		// Load startup actions
 		$this->load->model('setting/startup');
 

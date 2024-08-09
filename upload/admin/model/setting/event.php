@@ -1,37 +1,104 @@
 <?php
-namespace Opencart\Application\Model\Setting;
+namespace Opencart\Admin\Model\Setting;
+/**
+ * Class Event
+ *
+ * @package Opencart\Admin\Model\Setting
+ */
 class Event extends \Opencart\System\Engine\Model {
-	public function addEvent($code, $trigger, $action, $status = 1, $sort_order = 0) {
-		$this->db->query("INSERT INTO `" . DB_PREFIX . "event` SET `code` = '" . $this->db->escape($code) . "', `trigger` = '" . $this->db->escape($trigger) . "', `action` = '" . $this->db->escape($action) . "', `status` = '" . (int)$status . "', `sort_order` = '" . (int)$sort_order . "'");
+	/**
+	 * Add Event
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return int
+	 */
+	public function addEvent(array $data): int {
+		$this->db->query("INSERT INTO `" . DB_PREFIX . "event` SET `code` = '" . $this->db->escape($data['code']) . "', `description` = '" . $this->db->escape($data['description']) . "', `trigger` = '" . $this->db->escape($data['trigger']) . "', `action` = '" . $this->db->escape($data['action']) . "', `status` = '" . (bool)$data['status'] . "', `sort_order` = '" . (int)$data['sort_order'] . "'");
 
 		return $this->db->getLastId();
 	}
 
-	public function deleteEvent($event_id) {
+	/**
+	 * Delete Event
+	 *
+	 * @param int $event_id
+	 *
+	 * @return void
+	 */
+	public function deleteEvent(int $event_id): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "event` WHERE `event_id` = '" . (int)$event_id . "'");
 	}
 
-	public function deleteEventByCode($code) {
+	/**
+	 * Delete Event By Code
+	 *
+	 * @param string $code
+	 *
+	 * @return void
+	 */
+	public function deleteEventByCode(string $code): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "event` WHERE `code` = '" . $this->db->escape($code) . "'");
 	}
 
-	public function editStatus($event_id, $status) {
-		$this->db->query("UPDATE `" . DB_PREFIX . "event` SET `status` = '" . (int)$status . "' WHERE `event_id` = '" . (int)$event_id . "'");
+	/**
+	 * Edit Status
+	 *
+	 * @param int  $event_id
+	 * @param bool $status
+	 *
+	 * @return void
+	 */
+	public function editStatus(int $event_id, bool $status): void {
+		$this->db->query("UPDATE `" . DB_PREFIX . "event` SET `status` = '" . (bool)$status . "' WHERE `event_id` = '" . (int)$event_id . "'");
 	}
 
-	public function getEvent($event_id) {
+	/**
+	 * Edit Status By Code
+	 *
+	 * @param string $code
+	 * @param bool   $status
+	 *
+	 * @return void
+	 */
+	public function editStatusByCode(string $code, bool $status): void {
+		$this->db->query("UPDATE `" . DB_PREFIX . "event` SET `status` = '" . (bool)$status . "' WHERE `code` = '" . $this->db->escape($code) . "'");
+	}
+
+	/**
+	 * Get Event
+	 *
+	 * @param int $event_id
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getEvent(int $event_id): array {
 		$query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "event` WHERE `event_id` = '" . (int)$event_id . "'");
 
 		return $query->row;
 	}
 
-	public function getEventByCode($code) {
+	/**
+	 * Get Event By Code
+	 *
+	 * @param string $code
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getEventByCode(string $code): array {
 		$query = $this->db->query("SELECT DISTINCT * FROM `" . DB_PREFIX . "event` WHERE `code` = '" . $this->db->escape($code) . "' LIMIT 1");
 
 		return $query->row;
 	}
 
-	public function getEvents($data = []) {
+	/**
+	 * Get Events
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getEvents(array $data = []): array {
 		$sql = "SELECT * FROM `" . DB_PREFIX . "event`";
 
 		$sort_data = [
@@ -44,7 +111,7 @@ class Event extends \Opencart\System\Engine\Model {
 		];
 
 		if (isset($data['sort']) && in_array($data['sort'], $sort_data)) {
-			$sql .= " ORDER BY `" . $data['sort'] . "`";
+			$sql .= " ORDER BY " . $data['sort'];
 		} else {
 			$sql .= " ORDER BY `sort_order`";
 		}
@@ -72,9 +139,14 @@ class Event extends \Opencart\System\Engine\Model {
 		return $query->rows;
 	}
 
-	public function getTotalEvents() {
+	/**
+	 * Get Total Events
+	 *
+	 * @return int
+	 */
+	public function getTotalEvents(): int {
 		$query = $this->db->query("SELECT COUNT(*) AS `total` FROM `" . DB_PREFIX . "event`");
 
-		return $query->row['total'];
+		return (int)$query->row['total'];
 	}
 }

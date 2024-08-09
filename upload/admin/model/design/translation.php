@@ -1,26 +1,89 @@
 <?php
-namespace Opencart\Application\Model\Design;
+namespace Opencart\Admin\Model\Design;
+/**
+ * Class Translation
+ *
+ * @package Opencart\Admin\Model\Design
+ */
 class Translation extends \Opencart\System\Engine\Model {
-	public function addTranslation($data) {
+	/**
+	 * Add Translation
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return void
+	 */
+	public function addTranslation(array $data): void {
 		$this->db->query("INSERT INTO `" . DB_PREFIX . "translation` SET `store_id` = '" . (int)$data['store_id'] . "', `language_id` = '" . (int)$data['language_id'] . "', `route` = '" . $this->db->escape((string)$data['route']) . "', `key` = '" . $this->db->escape((string)$data['key']) . "', `value` = '" . $this->db->escape((string)$data['value']) . "', `date_added` = NOW()");
 	}
 
-	public function editTranslation($translation_id, $data) {
+	/**
+	 * Edit Translation
+	 *
+	 * @param int                  $translation_id
+	 * @param array<string, mixed> $data
+	 *
+	 * @return void
+	 */
+	public function editTranslation(int $translation_id, array $data): void {
 		$this->db->query("UPDATE `" . DB_PREFIX . "translation` SET `store_id` = '" . (int)$data['store_id'] . "', `language_id` = '" . (int)$data['language_id'] . "', `route` = '" . $this->db->escape((string)$data['route']) . "', `key` = '" . $this->db->escape((string)$data['key']) . "', `value` = '" . $this->db->escape((string)$data['value']) . "' WHERE `translation_id` = '" . (int)$translation_id . "'");
 	}
 
-	public function deleteTranslation($translation_id) {
+	/**
+	 * Delete Translation
+	 *
+	 * @param int $translation_id
+	 *
+	 * @return void
+	 */
+	public function deleteTranslation(int $translation_id): void {
 		$this->db->query("DELETE FROM `" . DB_PREFIX . "translation` WHERE `translation_id` = '" . (int)$translation_id . "'");
 	}
 
-	public function getTranslation($translation_id) {
+	/**
+	 * Delete Translations By Store ID
+	 *
+	 * @param int $store_id
+	 *
+	 * @return void
+	 */
+	public function deleteTranslationsByStoreId(int $store_id): void {
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "translation` WHERE `store_id` = '" . (int)$store_id . "'");
+	}
+
+	/**
+	 * Delete Translations By Language ID
+	 *
+	 * @param int $language_id
+	 *
+	 * @return void
+	 */
+	public function deleteTranslationsByLanguageId(int $language_id): void {
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "translation` WHERE `language_id` = '" . (int)$language_id . "'");
+	}
+
+	/**
+	 * Get Translation
+	 *
+	 * @param int $translation_id
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getTranslation(int $translation_id): array {
 		$query = $this->db->query("SELECT DISTINCT * FROM `" . DB_PREFIX . "translation` WHERE `translation_id` = '" . (int)$translation_id . "'");
 
 		return $query->row;
 	}
 
-	public function getTranslations($data = []) {
-		$sql = "SELECT *, (SELECT s.`name` FROM `" . DB_PREFIX . "store` s WHERE s.`store_id` = t.`store_id`) AS store, (SELECT l.`name` FROM `" . DB_PREFIX . "language` l WHERE l.`language_id` = t.`language_id`) AS language FROM `" . DB_PREFIX . "translation` t";
+	/**
+	 * Get Translations
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getTranslations(array $data = []): array {
+		$sql = "SELECT *, (SELECT `s`.`name` FROM `" . DB_PREFIX . "store` `s` WHERE `s`.`store_id` = `t`.`store_id`) AS `store`, (SELECT `l`.`name` FROM `" . DB_PREFIX . "language` `l` WHERE `l`.`language_id` = `t`.`language_id`) AS `language` FROM `" . DB_PREFIX . "translation` `t`";
 
 		$sort_data = [
 			'store',
@@ -31,7 +94,7 @@ class Translation extends \Opencart\System\Engine\Model {
 		];
 
 		if (isset($data['sort']) && in_array($data['sort'], $sort_data)) {
-			$sql .= " ORDER BY `" . $data['sort'] . "`";
+			$sql .= " ORDER BY " . $data['sort'];
 		} else {
 			$sql .= " ORDER BY store";
 		}
@@ -59,9 +122,14 @@ class Translation extends \Opencart\System\Engine\Model {
 		return $query->rows;
 	}
 
-	public function getTotalTranslations() {
+	/**
+	 * Get Total Translations
+	 *
+	 * @return int
+	 */
+	public function getTotalTranslations(): int {
 		$query = $this->db->query("SELECT COUNT(*) AS `total` FROM `" . DB_PREFIX . "translation`");
 
-		return $query->row['total'];
+		return (int)$query->row['total'];
 	}
 }

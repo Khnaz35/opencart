@@ -1,7 +1,15 @@
 <?php
-namespace Opencart\Application\Controller\Account;
+namespace Opencart\Catalog\Controller\Account;
+/**
+ * Class Success
+ *
+ * @package Opencart\Catalog\Controller\Account
+ */
 class Success extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * @return void
+	 */
+	public function index(): void {
 		$this->load->language('account/success');
 
 		$this->document->setTitle($this->language->get('heading_title'));
@@ -15,12 +23,12 @@ class Success extends \Opencart\System\Engine\Controller {
 
 		$data['breadcrumbs'][] = [
 			'text' => $this->language->get('text_account'),
-			'href' => $this->url->link('account/account', 'language=' . $this->config->get('config_language'))
+			'href' => $this->url->link('account/account', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''))
 		];
 
 		$data['breadcrumbs'][] = [
 			'text' => $this->language->get('heading_title'),
-			'href' => $this->url->link('account/success', 'language=' . $this->config->get('config_language'))
+			'href' => $this->url->link('account/success', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''))
 		];
 
 		if ($this->customer->isLogged()) {
@@ -32,7 +40,7 @@ class Success extends \Opencart\System\Engine\Controller {
 		if ($this->cart->hasProducts()) {
 			$data['continue'] = $this->url->link('checkout/cart', 'language=' . $this->config->get('config_language'));
 		} else {
-			$data['continue'] = $this->url->link('account/account', 'language=' . $this->config->get('config_language'));
+			$data['continue'] = $this->url->link('account/account', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''));
 		}
 
 		$data['column_left'] = $this->load->controller('common/column_left');

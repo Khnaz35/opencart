@@ -1,31 +1,76 @@
 <?php
-namespace Opencart\Application\Controller\Event;
+namespace Opencart\Admin\Controller\Event;
+/**
+ * Class Statistics
+ *
+ * @package Opencart\Admin\Controller\Event
+ */
 class Statistics extends \Opencart\System\Engine\Controller {
-	// admin/model/catalog/review/addReview/after
-	public function addReview(&$route, &$args, &$output) {
+	/**
+	 * Add Review
+	 *
+	 * @param string            $route
+	 * @param array<int, mixed> $args
+	 * @param mixed             $output
+	 *
+	 * @return void
+	 *
+	 * admin/model/catalog/review/addReview/after
+	 */
+	public function addReview(string &$route, array &$args, &$output): void {
 		$this->load->model('report/statistics');
 
 		$this->model_report_statistics->addValue('review', 1);
 	}
 
-	// admin/model/catalog/review/deleteReview/after
-	public function deleteReview(&$route, &$args, &$output) {
+	/**
+	 * Delete Review
+	 *
+	 * @param string            $route
+	 * @param array<int, mixed> $args
+	 * @param mixed             $output
+	 *
+	 * @return void
+	 *
+	 * admin/model/catalog/review/deleteReview/after
+	 */
+	public function deleteReview(string &$route, array &$args, &$output): void {
 		$this->load->model('report/statistics');
 
 		$this->model_report_statistics->removeValue('review', 1);
 	}
 
-	// admin/model/sale/returns/addReturn/after
-	public function addReturn(&$route, &$args, &$output) {
+	/**
+	 * Add Return
+	 *
+	 * @param string            $route
+	 * @param array<int, mixed> $args
+	 * @param mixed             $output
+	 *
+	 * @return void
+	 *
+	 * admin/model/sale/returns/addReturn/after
+	 */
+	public function addReturn(string &$route, array &$args, &$output): void {
 		$this->load->model('report/statistics');
 
-		$this->model_report_statistics->addValue('return', 1);
+		$this->model_report_statistics->addValue('returns', 1);
 	}
 
-	// admin/model/sale/returns/deleteReturn/after
-	public function deleteReturn(&$route, &$args, &$output) {
+	/**
+	 * Delete Return
+	 *
+	 * @param string            $route
+	 * @param array<int, mixed> $args
+	 * @param mixed             $output
+	 *
+	 * @return void
+	 *
+	 * admin/model/sale/returns/deleteReturn/after
+	 */
+	public function deleteReturn(string &$route, array &$args, &$output): void {
 		$this->load->model('report/statistics');
 
-		$this->model_report_statistics->removeValue('return', 1);
+		$this->model_report_statistics->removeValue('returns', 1);
 	}
 }

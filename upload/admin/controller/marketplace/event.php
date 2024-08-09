@@ -1,70 +1,20 @@
 <?php
-namespace Opencart\Application\Controller\Marketplace;
+namespace Opencart\Admin\Controller\Marketplace;
+/**
+ * Class Event
+ *
+ * @package Opencart\Admin\Controller\Marketplace
+ */
 class Event extends \Opencart\System\Engine\Controller {
-	private $error = [];
-	
-	public function index() {
+	/**
+	 * Index
+	 *
+	 * @return void
+	 */
+	public function index(): void {
 		$this->load->language('marketplace/event');
 
 		$this->document->setTitle($this->language->get('heading_title'));
-
-		$this->load->model('setting/event');
-
-		$this->getList();
-	}
-
-	public function delete() {
-		$this->load->language('marketplace/event');
-
-		$this->document->setTitle($this->language->get('heading_title'));
-
-		$this->load->model('setting/event');
-
-		if (isset($this->request->post['selected']) && $this->validate()) {
-			foreach ($this->request->post['selected'] as $event_id) {
-				$this->model_setting_event->deleteEvent($event_id);
-			}
-
-			$this->session->data['success'] = $this->language->get('text_success');
-
-			$url = '';
-
-			if (isset($this->request->get['sort'])) {
-				$url .= '&sort=' . $this->request->get['sort'];
-			}
-
-			if (isset($this->request->get['order'])) {
-				$url .= '&order=' . $this->request->get['order'];
-			}
-
-			if (isset($this->request->get['page'])) {
-				$url .= '&page=' . $this->request->get['page'];
-			}
-
-			$this->response->redirect($this->url->link('marketplace/event', 'user_token=' . $this->session->data['user_token'] . $url));
-		}
-
-		$this->getList();
-	}	
-	
-	public function getList() {
-		if (isset($this->request->get['sort'])) {
-			$sort = $this->request->get['sort'];
-		} else {
-			$sort = 'code';
-		}
-
-		if (isset($this->request->get['order'])) {
-			$order = $this->request->get['order'];
-		} else {
-			$order = 'ASC';
-		}
-
-		if (isset($this->request->get['page'])) {
-			$page = $this->request->get['page'];
-		} else {
-			$page = 1;
-		}
 
 		$url = '';
 
@@ -92,70 +42,53 @@ class Event extends \Opencart\System\Engine\Controller {
 			'href' => $this->url->link('marketplace/event', 'user_token=' . $this->session->data['user_token'] . $url)
 		];
 
-		$data['delete'] = $this->url->link('marketplace/event|delete', 'user_token=' . $this->session->data['user_token'] . $url);
+		$data['delete'] = $this->url->link('marketplace/event.delete', 'user_token=' . $this->session->data['user_token']);
 
-		$data['events'] = [];
-
-		$filter_data = [
-			'sort'  => $sort,
-			'order' => $order,
-			'start' => ($page - 1) * $this->config->get('config_pagination'),
-			'limit' => $this->config->get('config_pagination')
-		];
-
-		$event_total = $this->model_setting_event->getTotalEvents();
-
-		$results = $this->model_setting_event->getEvents($filter_data);
-
-		foreach ($results as $result) {
-			$data['events'][] = [
-				'event_id'   => $result['event_id'],
-				'code'       => $result['code'],
-				'trigger'    => $result['trigger'],
-				'action'     => $result['action'],
-				'status'     => $result['status'] ? $this->language->get('text_enabled') : $this->language->get('text_disabled'),
-				'enabled'    => $result['status'],
-				'sort_order' => $result['sort_order']
-			];
-		}
+		$data['list'] = $this->getList();
 
 		$data['user_token'] = $this->session->data['user_token'];
 
-		if (isset($this->error['warning'])) {
-			$data['error_warning'] = $this->error['warning'];
+		$data['header'] = $this->load->controller('common/header');
+		$data['column_left'] = $this->load->controller('common/column_left');
+		$data['footer'] = $this->load->controller('common/footer');
+
+		$this->response->setOutput($this->load->view('marketplace/event', $data));
+	}
+
+	/**
+	 * List
+	 *
+	 * @return void
+	 */
+	public function list(): void {
+		$this->load->language('marketplace/event');
+
+		$this->response->setOutput($this->getList());
+	}
+
+	/**
+	 * Get List
+	 *
+	 * @return string
+	 */
+	public function getList(): string {
+		if (isset($this->request->get['sort'])) {
+			$sort = (string)$this->request->get['sort'];
 		} else {
-			$data['error_warning'] = '';
+			$sort = 'code';
 		}
 
-		if (isset($this->session->data['success'])) {
-			$data['success'] = $this->session->data['success'];
-
-			unset($this->session->data['success']);
+		if (isset($this->request->get['order'])) {
+			$order = (string)$this->request->get['order'];
 		} else {
-			$data['success'] = '';
-		}
-
-		if (isset($this->request->post['selected'])) {
-			$data['selected'] = (array)$this->request->post['selected'];
-		} else {
-			$data['selected'] = [];
-		}
-
-		$url = '';
-
-		if ($order == 'ASC') {
-			$url .= '&order=DESC';
-		} else {
-			$url .= '&order=ASC';
+			$order = 'ASC';
 		}
 
 		if (isset($this->request->get['page'])) {
-			$url .= '&page=' . $this->request->get['page'];
+			$page = (int)$this->request->get['page'];
+		} else {
+			$page = 1;
 		}
-
-		$data['sort_code'] = $this->url->link('marketplace/event', 'user_token=' . $this->session->data['user_token'] . '&sort=code' . $url);
-		$data['sort_status'] = $this->url->link('marketplace/event', 'user_token=' . $this->session->data['user_token'] . '&sort=status' . $url);
-		$data['sort_sort_order'] = $this->url->link('marketplace/event', 'user_token=' . $this->session->data['user_token'] . '&sort=sort_order' . $url);
 
 		$url = '';
 
@@ -167,34 +100,83 @@ class Event extends \Opencart\System\Engine\Controller {
 			$url .= '&order=' . $this->request->get['order'];
 		}
 
+		if (isset($this->request->get['page'])) {
+			$url .= '&page=' . $this->request->get['page'];
+		}
+
+		$data['action'] = $this->url->link('marketplace/event.list', 'user_token=' . $this->session->data['user_token'] . $url);
+
+		$data['events'] = [];
+
+		$filter_data = [
+			'sort'  => $sort,
+			'order' => $order,
+			'start' => ($page - 1) * $this->config->get('config_pagination_admin'),
+			'limit' => $this->config->get('config_pagination_admin')
+		];
+
+		$this->load->model('setting/event');
+
+		$results = $this->model_setting_event->getEvents($filter_data);
+
+		foreach ($results as $result) {
+			$data['events'][] = [
+				'event_id'    => $result['event_id'],
+				'code'        => $result['code'],
+				'description' => $result['description'],
+				'trigger'     => $result['trigger'],
+				'action'      => $result['action'],
+				'status'      => $result['status'],
+				'sort_order'  => $result['sort_order'],
+				'enable'      => $this->url->link('marketplace/event.enable', 'user_token=' . $this->session->data['user_token'] . '&event_id=' . $result['event_id']),
+				'disable'     => $this->url->link('marketplace/event.disable', 'user_token=' . $this->session->data['user_token'] . '&event_id=' . $result['event_id'])
+			];
+		}
+
+		$url = '';
+
+		if ($order == 'ASC') {
+			$url .= '&order=DESC';
+		} else {
+			$url .= '&order=ASC';
+		}
+
+		$data['sort_code'] = $this->url->link('marketplace/event.list', 'user_token=' . $this->session->data['user_token'] . '&sort=code' . $url);
+		$data['sort_sort_order'] = $this->url->link('marketplace/event.list', 'user_token=' . $this->session->data['user_token'] . '&sort=sort_order' . $url);
+
+		$url = '';
+
+		if (isset($this->request->get['sort'])) {
+			$url .= '&sort=' . $this->request->get['sort'];
+		}
+
+		if (isset($this->request->get['order'])) {
+			$url .= '&order=' . $this->request->get['order'];
+		}
+
+		$event_total = $this->model_setting_event->getTotalEvents();
+
 		$data['pagination'] = $this->load->controller('common/pagination', [
 			'total' => $event_total,
 			'page'  => $page,
-			'limit' => $this->config->get('config_pagination'),
-			'url'   => $this->url->link('marketplace/event', 'user_token=' . $this->session->data['user_token'] . $url . '&page={page}')
+			'limit' => $this->config->get('config_pagination_admin'),
+			'url'   => $this->url->link('marketplace/event.list', 'user_token=' . $this->session->data['user_token'] . $url . '&page={page}')
 		]);
 
-		$data['results'] = sprintf($this->language->get('text_pagination'), ($event_total) ? (($page - 1) * $this->config->get('config_pagination')) + 1 : 0, ((($page - 1) * $this->config->get('config_pagination')) > ($event_total - $this->config->get('config_pagination'))) ? $event_total : ((($page - 1) * $this->config->get('config_pagination')) + $this->config->get('config_pagination')), $event_total, ceil($event_total / $this->config->get('config_pagination')));
+		$data['results'] = sprintf($this->language->get('text_pagination'), ($event_total) ? (($page - 1) * $this->config->get('config_pagination_admin')) + 1 : 0, ((($page - 1) * $this->config->get('config_pagination_admin')) > ($event_total - $this->config->get('config_pagination_admin'))) ? $event_total : ((($page - 1) * $this->config->get('config_pagination_admin')) + $this->config->get('config_pagination_admin')), $event_total, ceil($event_total / $this->config->get('config_pagination_admin')));
 
 		$data['sort'] = $sort;
 		$data['order'] = $order;
 
-		$data['header'] = $this->load->controller('common/header');
-		$data['column_left'] = $this->load->controller('common/column_left');
-		$data['footer'] = $this->load->controller('common/footer');
-
-		$this->response->setOutput($this->load->view('marketplace/event', $data));
+		return $this->load->view('marketplace/event_list', $data);
 	}
 
-	protected function validate() {
-		if (!$this->user->hasPermission('modify', 'marketplace/event')) {
-			$this->error['warning'] = $this->language->get('error_permission');
-		}
-
-		return !$this->error;
-	}
-
-	public function enable() {
+	/**
+	 * Enable
+	 *
+	 * @return void
+	 */
+	public function enable(): void {
 		$this->load->language('marketplace/event');
 
 		$json = [];
@@ -207,10 +189,12 @@ class Event extends \Opencart\System\Engine\Controller {
 
 		if (!$this->user->hasPermission('modify', 'marketplace/event')) {
 			$json['error'] = $this->language->get('error_permission');
-		} else {
+		}
+
+		if (!$json) {
 			$this->load->model('setting/event');
 
-			$this->model_setting_event->editStatus($event_id, 1);
+			$this->model_setting_event->editStatus($event_id, true);
 
 			$json['success'] = $this->language->get('text_success');
 		}
@@ -219,7 +203,12 @@ class Event extends \Opencart\System\Engine\Controller {
 		$this->response->setOutput(json_encode($json));
 	}
 
-	public function disable() {
+	/**
+	 * Disable
+	 *
+	 * @return void
+	 */
+	public function disable(): void {
 		$this->load->language('marketplace/event');
 
 		$json = [];
@@ -232,10 +221,46 @@ class Event extends \Opencart\System\Engine\Controller {
 
 		if (!$this->user->hasPermission('modify', 'marketplace/event')) {
 			$json['error'] = $this->language->get('error_permission');
-		} else {
+		}
+
+		if (!$json) {
 			$this->load->model('setting/event');
 
-			$this->model_setting_event->editStatus($event_id, 0);
+			$this->model_setting_event->editStatus($event_id, false);
+
+			$json['success'] = $this->language->get('text_success');
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Delete
+	 *
+	 * @return void
+	 */
+	public function delete(): void {
+		$this->load->language('marketplace/event');
+
+		$json = [];
+
+		if (isset($this->request->post['selected'])) {
+			$selected = (array)$this->request->post['selected'];
+		} else {
+			$selected = [];
+		}
+
+		if (!$this->user->hasPermission('modify', 'marketplace/event')) {
+			$json['error'] = $this->language->get('error_permission');
+		}
+
+		if (!$json) {
+			$this->load->model('setting/event');
+
+			foreach ($selected as $event_id) {
+				$this->model_setting_event->deleteEvent($event_id);
+			}
 
 			$json['success'] = $this->language->get('text_success');
 		}

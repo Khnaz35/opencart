@@ -1,7 +1,21 @@
 <?php
-namespace Opencart\Application\Controller\Event;
+namespace Opencart\Catalog\Controller\Event;
+/**
+ * Class Theme
+ *
+ * @package Opencart\Catalog\Controller\Event
+ */
 class Theme extends \Opencart\System\Engine\Controller {
-	public function index(&$route, &$args, &$code) {
+	/**
+	 * Index
+	 *
+	 * @param string            $route
+	 * @param array<int, mixed> $args
+	 * @param string            $code
+	 *
+	 * @return void
+	 */
+	public function index(string &$route, array &$args, string &$code): void {
 		// If there is a theme override we should get it
 		$this->load->model('design/theme');
 

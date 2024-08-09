@@ -1,7 +1,15 @@
 <?php
-namespace Opencart\Application\Controller\Error;
+namespace Opencart\Catalog\Controller\Error;
+/**
+ * Class Not Found
+ *
+ * @package Opencart\Catalog\Controller\Error
+ */
 class NotFound extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * @return void
+	 */
+	public function index(): void {
 		$this->load->language('error/not_found');
 
 		$this->document->setTitle($this->language->get('heading_title'));
@@ -23,12 +31,12 @@ class NotFound extends \Opencart\System\Engine\Controller {
 			$url = '';
 
 			if ($url_data) {
-				$url = '&' . urldecode(http_build_query($url_data, '', '&'));
+				$url .= '&' . urldecode(http_build_query($url_data, '', '&'));
 			}
 
 			$data['breadcrumbs'][] = [
 				'text' => $this->language->get('heading_title'),
-				'href' => $this->url->link($route, $url, $this->request->server['HTTPS'])
+				'href' => $this->url->link($route, $url)
 			];
 		}
 

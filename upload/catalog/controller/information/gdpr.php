@@ -1,10 +1,18 @@
 <?php
-namespace Opencart\Application\Controller\Information;
+namespace Opencart\Catalog\Controller\Information;
+/**
+ * Class Gdpr
+ *
+ * @package Opencart\Catalog\Controller\Information
+ */
 class Gdpr extends \Opencart\System\Engine\Controller {
-	public function index() {
+	/**
+	 * @return \Opencart\System\Engine\Action|null
+	 */
+	public function index(): ?\Opencart\System\Engine\Action {
 		$this->load->model('catalog/information');
 
-		$information_info = $this->model_catalog_information->getInformation($this->config->get('config_gdpr_id'));
+		$information_info = $this->model_catalog_information->getInformation((int)$this->config->get('config_gdpr_id'));
 
 		if ($information_info) {
 			$this->load->language('information/gdpr');
@@ -22,6 +30,8 @@ class Gdpr extends \Opencart\System\Engine\Controller {
 				'text' => $this->language->get('heading_title'),
 				'href' => $this->url->link('information/gdpr', 'language=' . $this->config->get('config_language'))
 			];
+
+			$data['action'] = $this->url->link('information/gdpr.action', 'language=' . $this->config->get('config_language'));
 
 			$data['title'] = $information_info['title'];
 
@@ -41,6 +51,8 @@ class Gdpr extends \Opencart\System\Engine\Controller {
 			$data['header'] = $this->load->controller('common/header');
 
 			$this->response->setOutput($this->load->view('information/gdpr', $data));
+
+			return null;
 		} else {
 			return new \Opencart\System\Engine\Action('error/not_found');
 		}
@@ -69,7 +81,12 @@ class Gdpr extends \Opencart\System\Engine\Controller {
 	 *	processing = 2
 	 *	denied     = -1
 	*/
-	public function action() {
+	/**
+	 * Action
+	 *
+	 * @return void
+	 */
+	public function action(): void {
 		$this->load->language('information/gdpr');
 
 		$json = [];
@@ -87,7 +104,7 @@ class Gdpr extends \Opencart\System\Engine\Controller {
 		}
 
 		// Validate E-Mail
-		if ((utf8_strlen($email) > 96) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+		if ((oc_strlen($email) > 96) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 			$json['error']['email'] = $this->language->get('error_email');
 		}
 
@@ -118,7 +135,7 @@ class Gdpr extends \Opencart\System\Engine\Controller {
 			}
 
 			if ($status) {
-				$this->model_account_gdpr->addGdpr(token(), $email, $action);
+				$this->model_account_gdpr->addGdpr(oc_token(32), $email, $action);
 			}
 
 			$json['success'] = $this->language->get('text_success');
@@ -128,9 +145,14 @@ class Gdpr extends \Opencart\System\Engine\Controller {
 		$this->response->setOutput(json_encode($json));
 	}
 
-	public function success() {
+	/**
+	 * Success
+	 *
+	 * @return \Opencart\System\Engine\Action|null
+	 */
+	public function success(): ?\Opencart\System\Engine\Action {
 		if (isset($this->request->get['code'])) {
-			$code = $this->request->get['code'];
+			$code = (string)$this->request->get['code'];
 		} else {
 			$code = '';
 		}
@@ -158,11 +180,11 @@ class Gdpr extends \Opencart\System\Engine\Controller {
 
 			$data['breadcrumbs'][] = [
 				'text' => $this->language->get('heading_title'),
-				'href' => $this->url->link('information/gdpr|success', 'language=' . $this->config->get('config_language'))
+				'href' => $this->url->link('information/gdpr.success', 'language=' . $this->config->get('config_language'))
 			];
 
 			if ($gdpr_info['status'] == 0) {
-				$this->model_account_gdpr->editStatus($code, 1);
+				$this->model_account_gdpr->editStatus($gdpr_info['gdpr_id'], 1);
 			}
 
 			if ($gdpr_info['action'] == 'export') {
@@ -179,6 +201,8 @@ class Gdpr extends \Opencart\System\Engine\Controller {
 			$data['header'] = $this->load->controller('common/header');
 
 			$this->response->setOutput($this->load->view('common/success', $data));
+
+			return null;
 		} else {
 			return new \Opencart\System\Engine\Action('error/not_found');
 		}
